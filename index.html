@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142a45">
+  <title>Ruang Absen — Absensi Magang</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #14213d;
+      --muted: #66758a;
+      --green: #1e3a5f;
+      --green-dark: #142a45;
+      --mint: #e8f0fa;
+      --paper: #fff;
+      --canvas: #f4f7fb;
+      --line: #e0e7f0;
+      --amber: #95651b;
+      --amber-bg: #fbf3e4;
+      --shadow: 0 18px 55px rgba(20, 42, 69, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .layout { min-height: 100vh; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 2;
+      display: flex;
+      width: 244px;
+      flex-direction: column;
+      padding: 30px 20px 22px;
+      border-right: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 9px; }
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--green);
+      color: white;
+    }
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-size: 16px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .nav-label {
+      margin: 49px 10px 12px;
+      color: #8997aa;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 1.25px;
+      text-transform: uppercase;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 12px;
+      border-radius: 10px;
+      color: #5d6d82;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .nav-link.active { background: var(--mint); color: var(--green-dark); }
+    .nav-link svg { width: 18px; height: 18px; }
+    .nav-link:focus-visible { outline: 3px solid #8fb2d8; outline-offset: 2px; }
+    .sidebar-note {
+      margin-top: auto;
+      padding: 15px;
+      border: 1px solid #e1e9f2;
+      border-radius: 13px;
+      background: #f4f7fb;
+    }
+    .sidebar-note strong { display: block; margin-bottom: 5px; font-size: 12px; }
+    .sidebar-note p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .sidebar-footer { padding: 18px 9px 0; color: #8997aa; font-size: 10px; }
+    main { max-width: 1440px; margin-left: 244px; padding: 35px 48px 48px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 35px; }
+    .eyebrow { margin: 0 0 6px; color: var(--green); font-size: 11px; font-weight: 750; letter-spacing: 1.35px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); letter-spacing: -1.3px; }
+    .topbar-date { display: flex; align-items: center; gap: 9px; color: #5d6d82; font-size: 12px; }
+    .topbar-date svg { width: 16px; height: 16px; color: var(--green); }
+    .welcome {
+      position: relative;
+      display: flex;
+      min-height: 202px;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+      padding: 34px 40px;
+      border-radius: 20px;
+      background: var(--green);
+      color: white;
+      box-shadow: 0 15px 35px rgba(20, 42, 69, .22);
+    }
+    .welcome::after, .welcome::before {
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: 50%;
+      content: "";
+    }
+    .welcome::after { top: -130px; right: 80px; }
+    .welcome::before { right: -75px; bottom: -160px; width: 310px; height: 310px; }
+    .welcome-copy, .clock { position: relative; z-index: 1; }
+    .welcome-kicker { margin: 0 0 11px; color: #c5d7ed; font-size: 12px; font-weight: 650; }
+    .welcome h2 { margin: 0; font-size: clamp(23px, 3vw, 30px); letter-spacing: -.7px; }
+    .welcome-copy p:last-child { margin: 10px 0 0; color: #e0eaf5; font-size: 13px; }
+    .clock { display: flex; min-width: 200px; flex-direction: column; align-items: flex-end; text-align: right; }
+    .clock-time { font-size: clamp(37px, 5vw, 52px); font-variant-numeric: tabular-nums; font-weight: 650; letter-spacing: -2px; }
+    .clock-seconds { margin-top: -3px; color: #d6e4f3; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 650; }
+    .clock-date { margin-top: 3px; color: #d6e4f3; font-size: 12px; }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.48fr) minmax(265px, .85fr); gap: 21px; margin-top: 22px; }
+    .stats-section { margin-top: 22px; scroll-margin-top: 24px; }
+    .stats-section > .section-heading { margin-bottom: 14px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; }
+    .stat-card { min-height: 112px; padding: 17px; }
+    .stat-label { color: var(--muted); font-size: 11px; }
+    .stat-value { margin-top: 10px; font-size: 27px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.8px; }
+    .stat-caption { margin-top: 5px; color: var(--muted); font-size: 10px; }
+    .internship-card { grid-column: span 2; }
+    .internship-progress { height: 7px; margin-top: 14px; overflow: hidden; border-radius: 99px; background: #e8edf4; }
+    .internship-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: #3b6290; transition: width .25s ease; }
+    .attendance-chart-card { grid-column: span 2; }
+    .chart-bars { display: grid; height: 84px; grid-template-columns: repeat(7, 1fr); align-items: end; gap: 10px; margin-top: 14px; }
+    .chart-day { display: grid; height: 100%; grid-template-rows: 1fr auto; align-items: end; gap: 7px; text-align: center; }
+    .chart-track { display: flex; height: 100%; align-items: end; justify-content: center; overflow: hidden; border-radius: 5px 5px 2px 2px; background: #f0f3f8; }
+    .chart-bar { width: min(22px, 70%); min-height: 0; border-radius: 5px 5px 2px 2px; background: #355d8c; }
+    .chart-bar.sick { background: #d69b34; }
+    .chart-bar.absent { background: #c66a6a; }
+    .chart-label { color: var(--muted); font-size: 9px; white-space: nowrap; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 13px; color: var(--muted); font-size: 10px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: #355d8c; }
+    .legend-dot.sick { background: #d69b34; }
+    .legend-dot.absent { background: #c66a6a; }
+    .internship-info { margin-top: 22px; scroll-margin-top: 24px; }
+    .internship-info > .section-heading { margin-bottom: 14px; }
+    .internship-details-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .info-detail-card { min-height: 122px; padding: 19px; }
+    .info-detail-title { color: var(--muted); font-size: 11px; }
+    .info-detail-value { margin-top: 10px; font-size: 17px; font-weight: 750; letter-spacing: -.3px; }
+    .info-detail-caption { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .card { border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    .attendance-card { padding: 25px 26px 23px; }
+    .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+    .section-heading h2, .profile-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.35px; }
+    .section-heading p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 20px;
+      background: #f1f4f8;
+      color: #68778a;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status-pill::before { width: 6px; height: 6px; border-radius: 50%; background: #9aa8ba; content: ""; }
+    .status-pill.done { background: #e8f0fa; color: var(--green); }
+    .status-pill.done::before { background: #3b82c4; }
+    .timeline { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin: 27px 0 22px; }
+    .time-box { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfe; }
+    .time-box-label { color: var(--muted); font-size: 11px; }
+    .time-box-value { margin-top: 8px; font-size: 23px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -.7px; }
+    .time-box-value.empty { color: #a7b3c2; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .button {
+      display: inline-flex;
+      min-height: 43px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 700;
+      transition: background .18s, transform .18s;
+    }
+    .button:active { transform: translateY(1px); }
+    .button:disabled { cursor: not-allowed; opacity: .45; }
+    .button svg { width: 16px; height: 16px; }
+    .button-primary { background: var(--green); color: white; }
+    .button-primary:hover:not(:disabled) { background: var(--green-dark); }
+    .button-secondary { border: 1px solid #d5dfeb; background: white; color: var(--green-dark); }
+    .button-secondary:hover:not(:disabled) { background: #f2f6fb; }
+    .helper { display: flex; align-items: flex-start; gap: 7px; margin: 17px 0 0; color: #75849a; font-size: 10px; line-height: 1.55; }
+    .helper svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; }
+    .profile-card { padding: 24px; }
+    .profile-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .edit-button { padding: 5px 0; border: 0; background: transparent; color: var(--green); font-size: 11px; font-weight: 700; }
+    .profile-actions { display: flex; align-items: center; gap: 12px; }
+    .profile-person { display: flex; align-items: center; gap: 12px; margin: 23px 0 18px; }
+    .avatar { display: grid; width: 43px; height: 43px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: #e8f0fa; color: var(--green); font-size: 14px; font-weight: 750; }
+    .person-name { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .person-detail { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .profile-divider { height: 1px; background: var(--line); }
+    .profile-info { display: grid; gap: 14px; padding-top: 17px; }
+    .info-label { margin-bottom: 4px; color: #8492a5; font-size: 10px; }
+    .info-value { font-size: 12px; font-weight: 600; }
+    .history-card { margin-top: 22px; padding: 24px 26px 7px; }
+    .history-tools { display: flex; align-items: center; gap: 10px; }
+    .month-select { padding: 8px 28px 8px 10px; border: 1px solid #d5dfeb; border-radius: 8px; background: white; color: #46566e; font-size: 11px; }
+    .export-button { min-height: 35px; padding: 0 11px; font-size: 10px; }
+    .table-wrap { overflow-x: auto; margin-top: 19px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+    th { padding: 10px 12px; border-bottom: 1px solid var(--line); color: #8492a5; font-size: 9px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; }
+    td { padding: 14px 12px; border-bottom: 1px solid #edf1f6; color: #4e5e74; font-size: 11px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td:first-child { color: var(--ink); font-weight: 650; }
+    .record-status { display: inline-flex; padding: 5px 8px; border-radius: 20px; background: #e8f0fa; color: var(--green); font-size: 9px; font-weight: 700; }
+    .empty-row td { padding: 27px 12px; color: #75849a; text-align: center; }
+    dialog {
+      width: min(440px, calc(100% - 28px));
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      border-radius: 17px;
+      box-shadow: 0 24px 90px rgba(20, 42, 69, .24);
+    }
+    dialog::backdrop { background: rgba(15, 31, 53, .42); backdrop-filter: blur(3px); }
+    .dialog-inner { padding: 25px; }
+    .dialog-inner h2 { margin: 0; font-size: 18px; letter-spacing: -.5px; }
+    .dialog-inner > p { margin: 8px 0 20px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .field { display: grid; gap: 7px; margin-bottom: 14px; }
+    .field label { color: #46566e; font-size: 11px; font-weight: 650; }
+    .field input { width: 100%; padding: 11px 12px; border: 1px solid #d5dfeb; border-radius: 8px; outline: 0; color: var(--ink); font-size: 12px; }
+    .field input:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    .field select, .field textarea { width: 100%; padding: 11px 12px; border: 1px solid #d5dfeb; border-radius: 8px; outline: 0; color: var(--ink); font: inherit; font-size: 12px; }
+    .field select:focus, .field textarea:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    .field textarea { min-height: 82px; resize: vertical; }
+    .form-error { min-height: 16px; margin: -3px 0 10px; color: #b7473c; font-size: 10px; }
+    .auth-hint { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 5;
+      max-width: calc(100vw - 32px);
+      padding: 12px 16px;
+      transform: translateY(16px);
+      border-radius: 10px;
+      background: #142a45;
+      color: white;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 210px; }
+      main { margin-left: 210px; padding: 30px 27px 38px; }
+      .content-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .internship-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .profile-card { display: grid; grid-template-columns: 1fr 1.1fr; align-items: center; column-gap: 25px; }
+      .profile-heading { grid-column: 1 / -1; }
+      .profile-person { margin-bottom: 0; }
+      .profile-divider { display: none; }
+      .profile-info { grid-template-columns: 1fr 1fr; padding-top: 0; }
+    }
+    @media (max-width: 620px) {
+      .sidebar { position: static; display: grid; width: auto; height: auto; grid-template-columns: 1fr 1fr; gap: 4px; padding: 10px 16px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .brand { padding: 0; }
+      .brand { grid-column: 1 / -1; margin-bottom: 5px; }
+      .brand-mark { width: 34px; height: 34px; border-radius: 11px; }
+      .nav-label, .sidebar-note, .sidebar-footer { display: none; }
+      .nav-link { justify-content: center; gap: 6px; padding: 9px 5px; font-size: 11px; }
+      .nav-link svg { width: 16px; height: 16px; }
+      main { margin: 0; padding: 25px 16px 32px; }
+      .topbar { align-items: flex-start; margin-bottom: 21px; }
+      .topbar-date { max-width: 115px; justify-content: flex-end; text-align: right; line-height: 1.5; }
+      .welcome { min-height: 188px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 18px; padding: 24px; border-radius: 16px; }
+      .welcome h2 { font-size: 24px; }
+      .clock { align-items: flex-start; text-align: left; }
+      .clock-time { font-size: 34px; }
+      .clock-seconds { font-size: 11px; }
+      .clock-date { font-size: 10px; }
+      .content-grid { gap: 14px; margin-top: 15px; }
+      .attendance-card, .profile-card { padding: 19px; }
+      .section-heading h2, .profile-heading h2 { font-size: 15px; }
+      .timeline { gap: 9px; margin: 21px 0 17px; }
+      .time-box { padding: 13px 11px; }
+      .time-box-value { font-size: 21px; }
+      .button { min-height: 41px; padding: 0 12px; font-size: 11px; }
+      .profile-card { display: block; }
+      .profile-person { margin: 18px 0 15px; }
+      .profile-divider { display: block; }
+      .profile-info { grid-template-columns: 1fr 1fr; padding-top: 15px; }
+      .internship-details-grid { grid-template-columns: 1fr; gap: 10px; }
+      .info-detail-card { min-height: 0; padding: 16px; }
+      .history-card { margin-top: 15px; padding: 19px 13px 5px; }
+      .history-card .section-heading { align-items: flex-start; flex-direction: column; }
+      .history-tools { width: 100%; justify-content: space-between; }
+      .history-tools .button { padding: 0 9px; }
+      th, td { padding-right: 9px; padding-left: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" aria-label="Navigasi utama">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 3.75v3M17 3.75v3M4.5 9h15M6.5 5.5h11A2 2 0 0 1 19.5 7.5v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="m8.5 14 2.2 2.2 4.8-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><div class="brand-name">Ruang Absen</div><div class="brand-caption">Portal absensi magang</div></div>
+      </div>
+      <div class="nav-label">Menu utama</div>
+      <a class="nav-link active" href="#beranda" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Beranda
+      </a>
+      <a class="nav-link" href="#absensi">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Absensi
+      </a>
+      <a class="nav-link" href="#statistik">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V9m8 10V5m8 14v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Statistik
+      </a>
+      <a class="nav-link" href="#profil">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7"/><path d="M5 20a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Profil
+      </a>
+      <a class="nav-link" href="#info-magang">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V7l8-4 8 4v13M9 20v-6h6v6M8 9h.01M12 9h.01M16 9h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Info magang
+      </a>
+      <a class="nav-link" href="divisi.html">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Kelola divisi
+      </a>
+      <a class="nav-link" href="riwayat.html">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5.5h16M4 10h16M4 14.5h10M4 19h10M18 15v6m-3-3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Riwayat absensi
+      </a>
+      <div class="sidebar-note"><strong>Catatan</strong><p>Jangan lupa absen pulang sebelum meninggalkan tempat magang.</p></div>
+      <div class="sidebar-footer">Ruang Absen · Magang</div>
+    </aside>
+
+    <main id="beranda">
+      <header class="topbar">
+        <div><p class="eyebrow">Absensi Magang Kesbangpol</p><h1>Absensi harian</h1></div>
+        <div class="topbar-date">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5.5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 3.5v4M16 3.5v4M4 10h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <span id="headerDate"></span>
+        </div>
+      </header>
+
+      <section class="welcome" aria-label="Sapaan">
+        <div class="welcome-copy">
+          <p class="welcome-kicker" id="greeting">Selamat datang 👋</p>
+          <h2 id="welcomeName">Siap untuk hari ini?</h2>
+          <p>Awali harimu dengan mencatat kehadiran.</p>
+        </div>
+        <div class="clock">
+          <div class="clock-time" id="clockTime" aria-label="Waktu sekarang">--:--</div>
+          <div class="clock-seconds" id="clockSeconds">-- detik</div>
+          <div class="clock-date" id="clockDate"></div>
+        </div>
+      </section>
+
+      <div class="content-grid">
+        <section class="card attendance-card" id="absensi" aria-labelledby="attendanceTitle">
+          <div class="section-heading">
+            <div><h2 id="attendanceTitle">Absensi hari ini</h2><p id="todayLabel"></p></div>
+            <span class="status-pill" id="todayStatus">Belum absen</span>
+          </div>
+          <div class="timeline">
+            <div class="time-box"><div class="time-box-label">Jam masuk</div><div class="time-box-value empty" id="checkInTime">--:--</div></div>
+            <div class="time-box"><div class="time-box-label">Jam pulang</div><div class="time-box-value empty" id="checkOutTime">--:--</div></div>
+          </div>
+          <div class="actions">
+            <button class="button button-primary" id="checkInButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span id="checkInButtonText">Absen masuk</span>
+            </button>
+            <button class="button button-secondary" id="checkOutButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Absen pulang
+            </button>
+            <button class="button button-secondary" id="reportAbsenceButton" type="button" disabled>Isi keterangan</button>
+          </div>
+          <p class="helper">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5m0-8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            Waktu absensi mengikuti jam server. Absensi hanya dapat dicatat satu kali per hari, baik hadir maupun keterangan.
+          </p>
+        </section>
+
+        <section class="card profile-card" id="profil" aria-labelledby="profileTitle">
+          <div class="profile-heading"><h2 id="profileTitle">Profil peserta</h2><div class="profile-actions"><button class="edit-button" id="editProfileButton" type="button">Edit profil</button><button class="edit-button" id="signOutButton" type="button">Keluar</button></div></div>
+          <div class="profile-person">
+            <div class="avatar" id="avatar">?</div>
+            <div style="min-width:0"><div class="person-name" id="profileName">Lengkapi profil kamu</div><div class="person-detail" id="profileIdentity">Peserta magang</div></div>
+          </div>
+          <div class="profile-divider"></div>
+          <div class="profile-info">
+            <div><div class="info-label">Instansi pendidikan</div><div class="info-value" id="profileSchool">Belum diisi</div></div>
+            <div><div class="info-label">Program</div><div class="info-value">Peserta magang</div></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="stats-section" id="statistik" aria-labelledby="statsTitle">
+        <div class="section-heading">
+          <div><h2 id="statsTitle">Ringkasan kehadiran</h2><p>Statistik berdasarkan catatan absensi kamu.</p></div>
+        </div>
+        <div class="stats-grid">
+          <article class="card stat-card">
+            <div class="stat-label">Hadir</div>
+            <div class="stat-value" id="statPresent">0</div>
+            <div class="stat-caption">hari tercatat masuk</div>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-label">Sakit</div>
+            <div class="stat-value" id="statSick">0</div>
+            <div class="stat-caption">hari tercatat sakit</div>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-label">Tidak hadir</div>
+            <div class="stat-value" id="statAbsent">0</div>
+            <div class="stat-caption">hari tercatat tidak hadir</div>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-label">Tingkat kehadiran</div>
+            <div class="stat-value" id="statRate">0%</div>
+            <div class="stat-caption">dari seluruh catatan</div>
+          </article>
+          <article class="card stat-card internship-card">
+            <div class="stat-label">Sisa hari magang</div>
+            <div class="stat-value" id="internshipRemaining">—</div>
+            <div class="stat-caption" id="internshipCaption">Menghitung sisa hari sampai 31 Desember.</div>
+            <div class="internship-progress" role="progressbar" aria-label="Progres periode magang" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="internshipProgress"></span></div>
+          </article>
+          <article class="card stat-card attendance-chart-card">
+            <div class="stat-label">Aktivitas 7 hari terakhir</div>
+            <div class="chart-bars" id="attendanceChart" role="img" aria-label="Grafik status absensi tujuh hari terakhir"></div>
+            <div class="chart-legend" aria-hidden="true">
+              <span class="legend-item"><span class="legend-dot"></span>Hadir</span>
+              <span class="legend-item"><span class="legend-dot sick"></span>Sakit</span>
+              <span class="legend-item"><span class="legend-dot absent"></span>Tidak hadir</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="internship-info" id="info-magang" aria-labelledby="internshipInfoTitle">
+        <div class="section-heading">
+          <div><h2 id="internshipInfoTitle">Informasi magang</h2><p>Instansi, jadwal kerja, dan pembimbing.</p></div>
+        </div>
+        <div class="internship-details-grid">
+          <article class="card info-detail-card">
+            <div class="info-detail-title">Instansi / Divisi</div>
+            <div class="info-detail-value">Kesbangpol</div>
+            <div class="info-detail-caption" id="divisionSummary">Divisi belum ditentukan</div>
+          </article>
+          <article class="card info-detail-card">
+            <div class="info-detail-title">Jadwal magang</div>
+            <div class="info-detail-value">Senin–Jumat</div>
+            <div class="info-detail-caption">08.00–16.00 WIB</div>
+          </article>
+          <article class="card info-detail-card">
+            <div class="info-detail-title">Pembimbing / Supervisor</div>
+            <div class="info-detail-value">Kang Alam &amp; Kang Dio</div>
+            <div class="info-detail-caption">Hubungi melalui jalur komunikasi internal.</div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <dialog id="authDialog" aria-labelledby="authTitle">
+    <form class="dialog-inner" id="authForm">
+      <h2 id="authTitle">Masuk ke Ruang Absen</h2>
+      <p>Gunakan email dan kata sandi yang diberikan oleh pengelola magang.</p>
+      <div class="field"><label for="authEmail">Email</label><input id="authEmail" name="email" type="email" autocomplete="username" maxlength="254" required placeholder="nama@email.com"></div>
+      <div class="field"><label for="authPassword">Kata sandi</label><input id="authPassword" name="password" type="password" autocomplete="current-password" required placeholder="Kata sandi akun kamu"></div>
+      <div class="form-error" id="authError" role="alert"></div>
+      <div class="dialog-actions"><button class="button button-primary" id="authSubmitButton" type="submit">Masuk</button></div>
+      <p class="auth-hint">Belum punya akun atau lupa kata sandi? Hubungi pengelola.</p>
+    </form>
+  </dialog>
+
+  <dialog id="profileDialog" aria-labelledby="dialogTitle">
+    <form class="dialog-inner" id="profileForm">
+      <h2 id="dialogTitle">Profil peserta</h2>
+      <p>Isi data diri supaya nama kamu tercatat pada setiap riwayat absensi.</p>
+      <div class="field"><label for="nameInput">Nama lengkap</label><input id="nameInput" name="name" autocomplete="name" maxlength="80" required placeholder="Contoh: Alya Putri"></div>
+      <div class="field"><label for="identityInput">NIM / NIS</label><input id="identityInput" name="identity" maxlength="40" placeholder="Contoh: 23012345"></div>
+      <div class="field"><label for="schoolInput">Instansi pendidikan</label><input id="schoolInput" name="school" maxlength="100" placeholder="Contoh: SMK Negeri 1 Bandung"></div>
+      <div class="form-error" id="formError" role="alert"></div>
+      <div class="dialog-actions">
+        <button class="button button-secondary" id="cancelProfileButton" type="button">Batal</button>
+        <button class="button button-primary" type="submit">Simpan profil</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="absenceDialog" aria-labelledby="absenceDialogTitle">
+    <form class="dialog-inner" id="absenceForm">
+      <h2 id="absenceDialogTitle">Keterangan ketidakhadiran</h2>
+      <p>Pilih status kehadiran hari ini. Keterangan ini akan terlihat di riwayat absensi bersama.</p>
+      <div class="field">
+        <label for="absenceStatus">Status</label>
+        <select id="absenceStatus" name="status" required>
+          <option value="absent">Tidak hadir</option>
+          <option value="sick">Sakit</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="absenceNote">Keterangan tambahan (opsional)</label>
+        <textarea id="absenceNote" name="note" maxlength="255" placeholder="Contoh: izin keluarga atau sedang demam"></textarea>
+      </div>
+      <div class="form-error" id="absenceError" role="alert"></div>
+      <div class="dialog-actions">
+        <button class="button button-secondary" id="cancelAbsenceButton" type="button">Batal</button>
+        <button class="button button-primary" id="submitAbsenceButton" type="submit">Simpan keterangan</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const API_URL = "api/index.php";
+      const $ = (id) => document.getElementById(id);
+      const profileDialog = $("profileDialog");
+      const authDialog = $("authDialog");
+      let csrfToken = "";
+      let currentUser = null;
+      let profile = null;
+      let records = [];
+      let divisions = [];
+      let toastTimeout;
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(toastTimeout);
+        toastTimeout = window.setTimeout(() => toast.classList.remove("show"), 3500);
+      }
+
+      async function apiRequest(action, { method = "GET", data = null } = {}) {
+        const headers = { Accept: "application/json" };
+        if (data !== null) headers["Content-Type"] = "application/json";
+        if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+        const response = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, {
+          method,
+          headers,
+          credentials: "same-origin",
+          body: data === null ? undefined : JSON.stringify(data)
+        });
+        let result;
+        try {
+          result = await response.json();
+        } catch (error) {
+          throw new Error("Server mengirim respons yang tidak valid. Pastikan hosting mendukung PHP.");
+        }
+        if (result.csrf) csrfToken = result.csrf;
+        if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+        return result;
+      }
+
+      function localDateKey(date) {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(date);
+        const part = (type) => parts.find((item) => item.type === type).value;
+        return `${part("year")}-${part("month")}-${part("day")}`;
+      }
+
+      function formatTime(value) {
+        if (!value) return "--:--";
+        const mysqlTime = String(value).match(/^\d{4}-\d{2}-\d{2}[ T](\d{2}):(\d{2})/);
+        if (mysqlTime) return `${mysqlTime[1]}:${mysqlTime[2]}`;
+        const normalized = value.includes("T") ? value : value.replace(" ", "T");
+        return new Intl.DateTimeFormat("id-ID", {
+          timeZone: "Asia/Jakarta",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        }).format(new Date(normalized));
+      }
+
+      function updateClock() {
+        const now = new Date();
+        const timeParts = new Intl.DateTimeFormat("id-ID", {
+          timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+        }).formatToParts(now);
+        const timePart = type => timeParts.find(part => part.type === type).value;
+        $("clockTime").textContent = `${timePart("hour")}:${timePart("minute")}`;
+        $("clockSeconds").textContent = `${timePart("second")} detik`;
+        $("clockDate").textContent = new Intl.DateTimeFormat("id-ID", {
+          timeZone: "Asia/Jakarta", weekday: "short", day: "numeric", month: "short"
+        }).format(now);
+        const dateLabel = new Intl.DateTimeFormat("id-ID", {
+          timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric"
+        }).format(now);
+        $("headerDate").textContent = dateLabel;
+        $("todayLabel").textContent = dateLabel;
+        const hour = Number(new Intl.DateTimeFormat("en", {
+          timeZone: "Asia/Jakarta", hour: "numeric", hour12: false
+        }).format(now));
+        $("greeting").textContent = hour < 11 ? "Selamat pagi 👋" : hour < 15 ? "Selamat siang 👋" : hour < 18 ? "Selamat sore 👋" : "Selamat malam 👋";
+      }
+
+      function renderProfile() {
+        const name = profile && profile.name ? profile.name : "";
+        $("welcomeName").textContent = name ? `Halo, ${name.trim()}!` : "Siap untuk hari ini?";
+        $("profileName").textContent = name || "Lengkapi profil kamu";
+        $("profileIdentity").textContent = (profile && profile.identity) || "Peserta magang";
+        $("profileSchool").textContent = (profile && profile.school) || "Belum diisi";
+        $("divisionSummary").textContent = divisions.length
+          ? `Divisi: ${divisions.map((division) => division.name).join(", ")}`
+          : "Divisi belum ditentukan";
+        $("avatar").textContent = name ? name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() : "?";
+        $("signOutButton").hidden = !currentUser;
+        $("editProfileButton").disabled = !currentUser;
+      }
+
+      function renderToday() {
+        const record = records.find((item) => item.date === localDateKey(new Date()) && item.userId === currentUser?.id);
+        const checkedIn = Boolean(record && record.checkIn);
+        const checkedOut = Boolean(record && record.checkOut);
+        const absenceStatus = record && record.attendanceStatus !== "present" ? record.attendanceStatus : "";
+        $("checkInTime").textContent = checkedIn ? formatTime(record.checkIn) : "--:--";
+        $("checkOutTime").textContent = checkedOut ? formatTime(record.checkOut) : "--:--";
+        $("checkInTime").classList.toggle("empty", !checkedIn);
+        $("checkOutTime").classList.toggle("empty", !checkedOut);
+        $("checkInButton").disabled = !currentUser || !profile || Boolean(record);
+        $("checkInButtonText").textContent = checkedIn ? "Sudah absen masuk" : absenceStatus ? "Keterangan tercatat" : "Absen masuk";
+        $("checkOutButton").disabled = !currentUser || !profile || !checkedIn || checkedOut || Boolean(absenceStatus);
+        $("reportAbsenceButton").disabled = !currentUser || !profile || Boolean(record);
+        const status = $("todayStatus");
+        status.classList.toggle("done", checkedIn);
+        status.textContent = absenceStatus === "sick" ? "Sakit" : absenceStatus === "absent" ? "Tidak hadir" : checkedOut ? "Selesai" : checkedIn ? "Sudah masuk" : currentUser ? "Belum absen" : "Silakan masuk";
+      }
+
+      function renderStatistics() {
+        const userRecords = currentUser ? records.filter((item) => item.userId === currentUser.id) : [];
+        const presentRecords = userRecords.filter((item) => item.checkIn && (!item.attendanceStatus || item.attendanceStatus === "present"));
+        const sickRecords = userRecords.filter((item) => item.attendanceStatus === "sick");
+        const absentRecords = userRecords.filter((item) => item.attendanceStatus === "absent");
+        const total = presentRecords.length + sickRecords.length + absentRecords.length;
+        $("statPresent").textContent = String(presentRecords.length);
+        $("statSick").textContent = String(sickRecords.length);
+        $("statAbsent").textContent = String(absentRecords.length);
+        $("statRate").textContent = `${total ? Math.round((presentRecords.length / total) * 100) : 0}%`;
+
+        const progressBar = $("internshipProgress");
+        const progress = progressBar.parentElement;
+        const caption = $("internshipCaption");
+        const chart = $("attendanceChart");
+        chart.replaceChildren();
+        const todayParts = localDateKey(new Date()).split("-").map(Number);
+        const today = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
+        const yearStart = new Date(Date.UTC(todayParts[0], 0, 1));
+        const deadline = new Date(Date.UTC(todayParts[0], 11, 31));
+        const remaining = Math.max(0, Math.ceil((deadline - today) / 86400000));
+        const yearDuration = Math.round((deadline - yearStart) / 86400000);
+        const elapsed = Math.min(yearDuration, Math.max(0, Math.round((today - yearStart) / 86400000)));
+        const percentage = Math.round((elapsed / Math.max(1, yearDuration)) * 100);
+        $("internshipRemaining").textContent = String(remaining);
+        caption.textContent = remaining === 0
+          ? "Batas periode: 31 Desember tahun ini."
+          : `Sampai 31 Desember ${todayParts[0]} · ${remaining} hari kalender.`;
+        progressBar.style.width = `${percentage}%`;
+        progress.setAttribute("aria-valuenow", String(percentage));
+        for (let offset = -6; offset <= 0; offset += 1) {
+          const date = new Date(today);
+          date.setUTCDate(date.getUTCDate() + offset);
+          const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+          const entry = userRecords.find((item) => item.date === key);
+          const type = entry?.attendanceStatus === "sick" ? "sick" : entry?.attendanceStatus === "absent" ? "absent" : entry?.checkIn ? "present" : "";
+          const day = document.createElement("div");
+          day.className = "chart-day";
+          day.setAttribute("aria-label", `${key}: ${type === "sick" ? "Sakit" : type === "absent" ? "Tidak hadir" : type === "present" ? "Hadir" : "Belum ada catatan"}`);
+          const track = document.createElement("div");
+          track.className = "chart-track";
+          const bar = document.createElement("span");
+          bar.className = `chart-bar${type && type !== "present" ? ` ${type}` : ""}`;
+          bar.style.height = type ? "100%" : "0";
+          track.append(bar);
+          const label = document.createElement("span");
+          label.className = "chart-label";
+          label.textContent = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", weekday: "short" }).format(date);
+          day.append(track, label);
+          chart.append(day);
+        }
+      }
+
+      function render() {
+        renderProfile();
+        renderToday();
+        renderStatistics();
+      }
+
+      function setSession(session) {
+        currentUser = session.user || null;
+        profile = session.profile || null;
+        records = session.records || [];
+        divisions = session.divisions || [];
+        if (!currentUser) {
+          if (!authDialog.open) authDialog.showModal();
+          render();
+          return;
+        }
+        if (authDialog.open) authDialog.close();
+        render();
+        if (!profile || !profile.name) openProfileDialog();
+      }
+
+      function openProfileDialog() {
+        if (!currentUser) {
+          showToast("Masuk terlebih dahulu untuk mengisi profil.");
+          return;
+        }
+        $("nameInput").value = (profile && profile.name) || "";
+        $("identityInput").value = (profile && profile.identity) || "";
+        $("schoolInput").value = (profile && profile.school) || "";
+        $("formError").textContent = "";
+        $("cancelProfileButton").disabled = !profile;
+        profileDialog.showModal();
+        $("nameInput").focus();
+      }
+
+      async function loadSharedData() {
+        const result = await apiRequest("session");
+        setSession(result);
+      }
+
+      async function refreshHistory() {
+        if (!currentUser) return;
+        try {
+          const result = await apiRequest("history");
+          records = result.records;
+          const divisionResult = await apiRequest("divisions");
+          divisions = divisionResult.divisions;
+          renderProfile();
+          renderToday();
+          renderStatistics();
+        } catch (error) {
+          console.error("Tidak dapat memperbarui riwayat absensi dari MySQL.", error);
+          showToast(`Riwayat tidak dapat diperbarui: ${error.message}`);
+        }
+      }
+
+      async function saveAttendance(type) {
+        if (!currentUser || !profile) {
+          showToast("Masuk dan lengkapi profil sebelum mencatat absensi.");
+          return;
+        }
+        const button = type === "checkIn" ? $("checkInButton") : $("checkOutButton");
+        button.disabled = true;
+        try {
+          const result = await apiRequest(type === "checkIn" ? "check-in" : "check-out", { method: "POST", data: {} });
+          records = result.records;
+          render();
+          showToast(type === "checkIn" ? "Absensi masuk berhasil dicatat." : "Absensi pulang berhasil dicatat.");
+        } catch (error) {
+          console.error("Tidak dapat menyimpan absensi ke MySQL.", error);
+          showToast(`Absensi gagal disimpan: ${error.message}`);
+          renderToday();
+        }
+      }
+
+      $("reportAbsenceButton").addEventListener("click", () => {
+        if (!currentUser || !profile) {
+          showToast("Masuk dan lengkapi profil sebelum mengisi keterangan.");
+          return;
+        }
+        $("absenceError").textContent = "";
+        $("absenceStatus").value = "absent";
+        $("absenceNote").value = "";
+        $("absenceDialog").showModal();
+      });
+      $("cancelAbsenceButton").addEventListener("click", () => $("absenceDialog").close());
+      $("absenceForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submitButton = $("submitAbsenceButton");
+        submitButton.disabled = true;
+        $("absenceError").textContent = "";
+        try {
+          const result = await apiRequest("report-absence", {
+            method: "POST",
+            data: { status: $("absenceStatus").value, note: $("absenceNote").value.trim() }
+          });
+          records = result.records;
+          $("absenceDialog").close();
+          render();
+          showToast("Keterangan ketidakhadiran berhasil disimpan.");
+        } catch (error) {
+          console.error("Tidak dapat menyimpan keterangan ketidakhadiran.", error);
+          $("absenceError").textContent = error.message === "Aksi tidak ditemukan."
+            ? "API hosting belum diperbarui. Unggah api/index.php versi terbaru, lalu jalankan migrasi database."
+            : error.message;
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      $("authForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        $("authError").textContent = "";
+        const submitButton = $("authSubmitButton");
+        submitButton.disabled = true;
+        try {
+          const result = await apiRequest("login", {
+            method: "POST",
+            data: { email: $("authEmail").value.trim(), password: $("authPassword").value }
+          });
+          $("authPassword").value = "";
+          setSession(result);
+          showToast(`Berhasil masuk${result.profile?.name ? `, ${result.profile.name}` : ""}.`);
+        } catch (error) {
+          console.error("Login ke database gagal.", error);
+          $("authError").textContent = error.message;
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      $("profileForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const name = $("nameInput").value.trim();
+        if (!name) {
+          $("formError").textContent = "Nama lengkap wajib diisi.";
+          $("nameInput").focus();
+          return;
+        }
+        const submitButton = $("profileForm").querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        $("formError").textContent = "";
+        try {
+          const result = await apiRequest("profile", {
+            method: "POST",
+            data: {
+              name,
+              identity: $("identityInput").value.trim(),
+              school: $("schoolInput").value.trim()
+            }
+          });
+          profile = result.profile;
+          profileDialog.close();
+          render();
+          showToast("Profil berhasil disimpan.");
+        } catch (error) {
+          console.error("Tidak dapat menyimpan profil ke MySQL.", error);
+          $("formError").textContent = error.message;
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      $("editProfileButton").addEventListener("click", openProfileDialog);
+      $("cancelProfileButton").addEventListener("click", () => profileDialog.close());
+      $("signOutButton").addEventListener("click", async () => {
+        try {
+          const result = await apiRequest("logout", { method: "POST", data: {} });
+          setSession(result);
+          showToast("Kamu berhasil keluar.");
+        } catch (error) {
+          console.error("Tidak dapat keluar dari akun.", error);
+          showToast(`Gagal keluar: ${error.message}`);
+        }
+      });
+      $("checkInButton").addEventListener("click", () => saveAttendance("checkIn"));
+      $("checkOutButton").addEventListener("click", () => saveAttendance("checkOut"));
+      document.querySelectorAll(".nav-link[href^='#']").forEach((link) => {
+        link.addEventListener("click", () => {
+          document.querySelectorAll(".nav-link").forEach((item) => {
+            item.classList.toggle("active", item === link);
+            if (item === link) item.setAttribute("aria-current", "page");
+            else item.removeAttribute("aria-current");
+          });
+        });
+      });
+      updateClock();
+      window.setInterval(updateClock, 1000);
+      window.setInterval(refreshHistory, 60000);
+      window.addEventListener("focus", refreshHistory);
+      render();
+      apiRequest("session")
+        .then(setSession)
+        .catch((error) => {
+          console.error("Tidak dapat menghubungi API absensi MySQL.", error);
+          $("authError").textContent = `Tidak dapat menghubungi server absensi: ${error.message}`;
+          authDialog.showModal();
+        });
+    })();
+  </script>
+</body>
+</html>
