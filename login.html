@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142a45">
+  <title>Masuk — Ruang Absen</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172b45;
+      background: #f2f5f9;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    * { box-sizing: border-box; }
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      margin: 0;
+      padding: 24px;
+      background:
+        radial-gradient(ellipse at 14% 8%, rgba(214, 227, 242, .76), transparent 36%),
+        radial-gradient(ellipse at 94% 94%, rgba(220, 232, 242, .8), transparent 38%),
+        #f2f5f9;
+    }
+    .login-layout { display: grid; width: min(920px, 100%); grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 24px; background: white; box-shadow: 0 24px 70px rgba(20, 42, 69, .12); }
+    .institution-panel { display: flex; min-height: 570px; flex-direction: column; justify-content: space-between; padding: 44px; background: linear-gradient(145deg, #142a45, #1d4167); color: white; }
+    .institution-brand { display: flex; align-items: center; gap: 14px; }
+    .institution-brand img { width: 66px; height: 66px; flex: 0 0 auto; object-fit: contain; border-radius: 15px; background: white; }
+    .institution-brand strong { display: block; font-size: 15px; letter-spacing: .1px; }
+    .institution-brand span { display: block; margin-top: 5px; color: #cfdaea; font-size: 11px; }
+    .institution-copy { position: relative; padding: 45px 0; }
+    .institution-copy::before { position: absolute; top: 0; left: 0; width: 46px; height: 3px; border-radius: 4px; background: #91b3d7; content: ""; }
+    .eyebrow { margin: 0 0 13px; color: #c3d6eb; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+    h1 { max-width: 340px; margin: 0; font-size: clamp(29px, 4vw, 39px); letter-spacing: -1.3px; line-height: 1.15; }
+    .institution-copy p:last-child { max-width: 320px; margin: 16px 0 0; color: #d9e4f1; font-size: 13px; line-height: 1.7; }
+    .panel-footer { color: #bfd0e3; font-size: 10px; }
+    .form-panel { display: flex; flex-direction: column; justify-content: center; padding: 54px clamp(28px, 6vw, 64px); }
+    .form-panel h2 { margin: 0; font-size: 25px; letter-spacing: -.7px; }
+    .form-description { margin: 9px 0 30px; color: #718096; font-size: 12px; line-height: 1.6; }
+    .field { display: grid; gap: 8px; margin-bottom: 18px; }
+    label { color: #46566e; font-size: 11px; font-weight: 700; }
+    input { width: 100%; min-height: 46px; padding: 0 13px; border: 1px solid #d5dfeb; border-radius: 9px; outline: 0; color: #172b45; font: inherit; font-size: 12px; transition: border-color .15s, box-shadow .15s; }
+    input:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    .form-error { min-height: 18px; margin: 0 0 12px; color: #b7473c; font-size: 11px; line-height: 1.5; }
+    .submit-button { width: 100%; min-height: 46px; border: 0; border-radius: 9px; background: #1d4167; color: white; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s, transform .15s; }
+    .submit-button:hover:not(:disabled) { background: #142a45; }
+    .submit-button:active:not(:disabled) { transform: translateY(1px); }
+    .submit-button:disabled { cursor: wait; opacity: .65; }
+    .support-note { margin: 21px 0 0; color: #718096; font-size: 11px; line-height: 1.6; text-align: center; }
+    .support-note strong { color: #46566e; }
+    @keyframes page-enter { from { opacity: 0; transform: translateY(24px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+    .institution-panel { animation: page-enter .78s cubic-bezier(.16, 1, .3, 1) both; }
+    .form-panel { animation: page-enter .78s cubic-bezier(.16, 1, .3, 1) both; animation-delay: 110ms; }
+    @media (max-width: 680px) {
+      body { padding: 14px; }
+      .login-layout { max-width: 440px; grid-template-columns: 1fr; border-radius: 19px; }
+      .institution-panel { min-height: 0; padding: 24px; }
+      .institution-brand img { width: 52px; height: 52px; }
+      .institution-brand strong { font-size: 13px; }
+      .institution-copy { padding: 30px 0 23px; }
+      .institution-copy::before { display: none; }
+      .institution-copy h1 { font-size: 25px; }
+      .institution-copy p:last-child { margin-top: 9px; font-size: 11px; }
+      .panel-footer { display: none; }
+      .form-panel { padding: 30px 24px 28px; }
+      .form-panel h2 { font-size: 22px; }
+      .form-description { margin-bottom: 23px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .institution-panel, .form-panel { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="login-layout">
+    <section class="institution-panel" aria-label="Informasi instansi">
+      <div class="institution-brand">
+        <img src="image/logo-kesbang.png" alt="Logo Badan Kesatuan Bangsa dan Politik Kota Bandung">
+        <div><strong>Kesbangpol Kota Bandung</strong><span>Portal absensi peserta magang</span></div>
+      </div>
+      <div class="institution-copy">
+        <p class="eyebrow">Ruang Absen</p>
+        <h1>Selamat datang di portal absensi magang.</h1>
+        <p>Gunakan akun peserta untuk mencatat kehadiran dan melihat informasi magang.</p>
+      </div>
+      <div class="panel-footer">Badan Kesatuan Bangsa dan Politik Kota Bandung</div>
+    </section>
+    <section class="form-panel" aria-labelledby="loginTitle">
+      <h2 id="loginTitle">Masuk ke akun</h2>
+      <p class="form-description">Masukkan email dan kata sandi yang diberikan oleh pengelola magang.</p>
+      <form id="loginForm">
+        <div class="field">
+          <label for="emailInput">Email</label>
+          <input id="emailInput" name="email" type="email" autocomplete="username" maxlength="254" required placeholder="nama@email.com">
+        </div>
+        <div class="field">
+          <label for="passwordInput">Kata sandi</label>
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" required placeholder="Masukkan kata sandi">
+        </div>
+        <div class="form-error" id="loginError" role="alert" aria-live="polite"></div>
+        <button class="submit-button" id="submitButton" type="submit">Masuk</button>
+      </form>
+      <p class="support-note">Belum memiliki akun atau lupa kata sandi?<br><strong>Hubungi pengelola magang.</strong></p>
+    </section>
+  </main>
+  <script>
+    (() => {
+      "use strict";
+
+      const API_URL = "api/index.php";
+      const $ = (id) => document.getElementById(id);
+      const allowedDestinations = new Set(["index.html", "profil.html", "riwayat.html", "divisi.html"]);
+      let csrfToken = "";
+
+      function destination() {
+        const requested = new URLSearchParams(window.location.search).get("next") || "index.html";
+        const match = /^(index|profil|riwayat|divisi)\.html(?:#[a-z-]+)?$/.exec(requested);
+        return match && allowedDestinations.has(match[1] + ".html") ? requested : "index.html";
+      }
+
+      async function apiRequest(action, { method = "GET", data = null } = {}) {
+        const headers = { Accept: "application/json" };
+        if (data !== null) headers["Content-Type"] = "application/json";
+        if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+        const response = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, {
+          method,
+          headers,
+          credentials: "same-origin",
+          body: data === null ? undefined : JSON.stringify(data)
+        });
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("Server mengirim respons yang tidak valid. Pastikan hosting mendukung PHP.");
+        }
+        if (result.csrf) csrfToken = result.csrf;
+        if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+        return result;
+      }
+
+      async function checkSession() {
+        const session = await apiRequest("session");
+        if (session.user) window.location.replace(session.user.role === "admin" ? "divisi.html" : destination());
+      }
+
+      $("loginForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = $("submitButton");
+        const errorBox = $("loginError");
+        button.disabled = true;
+        button.textContent = "Memeriksa...";
+        errorBox.textContent = "";
+        try {
+          if (!csrfToken) await apiRequest("session");
+          const result = await apiRequest("login", {
+            method: "POST",
+            data: {
+              email: $("emailInput").value.trim(),
+              password: $("passwordInput").value
+            }
+          });
+          $("passwordInput").value = "";
+          window.location.replace(result.user?.role === "admin" ? "divisi.html" : destination());
+        } catch (error) {
+          console.error("Login gagal.", error);
+          errorBox.textContent = error.message;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Masuk";
+        }
+      });
+
+      checkSession().catch((error) => {
+        console.error("Tidak dapat memeriksa sesi login.", error);
+        $("loginError").textContent = `Tidak dapat terhubung ke server absensi: ${error.message}`;
+      });
+    })();
+  </script>
+</body>
+</html>

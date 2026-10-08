@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142a45">
+  <title>Profil Peserta — Ruang Absen</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #14213d;
+      --muted: #66758a;
+      --navy: #1e3a5f;
+      --navy-dark: #142a45;
+      --pale: #e8f0fa;
+      --paper: #fff;
+      --canvas: #f4f7fb;
+      --line: #e0e7f0;
+      --shadow: 0 18px 55px rgba(20, 42, 69, .08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 2; display: flex; width: 244px; flex-direction: column; gap: 4px; padding: 30px 20px 22px; border-right: 1px solid var(--line); background: #fbfcfe; }
+    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 26px; padding: 0 9px; }
+    .brand-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 13px; background: var(--navy); color: white; }
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-size: 16px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .nav-label { margin: 12px 10px 8px; color: #8997aa; font-size: 10px; font-weight: 750; letter-spacing: 1.25px; text-transform: uppercase; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; color: #5d6d82; font-size: 13px; font-weight: 600; text-decoration: none; }
+    .nav-link:hover, .nav-link.active { background: var(--pale); color: var(--navy-dark); }
+    .nav-link svg { width: 18px; height: 18px; }
+    .sidebar button.nav-link { width: 100%; border: 0; background: transparent; text-align: left; }
+    .mobile-nav-toggle { display: none; }
+    .sidebar-footer { margin-top: auto; padding: 18px 9px 0; color: #8997aa; font-size: 10px; }
+    main { max-width: 1160px; margin-left: 244px; padding: 35px 48px 48px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 6px; color: var(--navy); font-size: 11px; font-weight: 750; letter-spacing: 1.35px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); letter-spacing: -1.3px; }
+    .topbar-date { color: var(--muted); font-size: 12px; }
+    .profile-layout { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); gap: 18px; align-items: start; }
+    .card { border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    .profile-summary { padding: 24px; text-align: center; }
+    .avatar { display: grid; width: 70px; height: 70px; margin: 0 auto 14px; place-items: center; border-radius: 22px; background: var(--pale); color: var(--navy); font-size: 22px; font-weight: 750; }
+    .summary-name { overflow-wrap: anywhere; font-size: 17px; font-weight: 750; }
+    .summary-email { margin-top: 6px; overflow-wrap: anywhere; color: var(--muted); font-size: 11px; }
+    .division-display { margin-top: 19px; padding: 14px; border: 1px solid #dfe8f3; border-radius: 11px; background: #f7f9fc; text-align: left; }
+    .division-label { color: var(--muted); font-size: 10px; font-weight: 650; }
+    .division-name { margin-top: 6px; color: var(--navy-dark); font-size: 14px; font-weight: 750; }
+    .division-help { margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .form-card { padding: 24px 26px; }
+    .form-card h2 { margin: 0; font-size: 17px; }
+    .form-card > p { margin: 7px 0 21px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .field { display: grid; gap: 7px; margin-bottom: 15px; }
+    .field label { color: #46566e; font-size: 11px; font-weight: 650; }
+    .field input, .field select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #d5dfeb; border-radius: 8px; outline: 0; background: white; color: var(--ink); font-size: 12px; }
+    .field input:focus, .field select:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    .field input:read-only { background: #f7f9fc; color: var(--muted); }
+    .actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .button { display: inline-flex; min-height: 41px; align-items: center; justify-content: center; gap: 7px; padding: 0 15px; border: 1px solid #d5dfeb; border-radius: 9px; background: white; color: var(--navy-dark); font-size: 11px; font-weight: 700; text-decoration: none; }
+    .button:hover:not(:disabled) { background: #f2f6fb; }
+    .button-primary { border-color: var(--navy); background: var(--navy); color: white; }
+    .button-primary:hover:not(:disabled) { background: var(--navy-dark); }
+    .button:disabled { cursor: wait; opacity: .55; }
+    .form-error { min-height: 16px; margin: 2px 0 10px; color: #b7473c; font-size: 11px; }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 5; max-width: calc(100vw - 32px); padding: 12px 16px; transform: translateY(16px); border-radius: 10px; background: var(--navy-dark); color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    @keyframes page-enter { from { opacity: 0; transform: translateY(24px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+    main > .topbar { animation: page-enter .72s cubic-bezier(.16, 1, .3, 1) both; }
+    .profile-layout > .card { animation: page-enter .78s cubic-bezier(.16, 1, .3, 1) both; }
+    .profile-layout > .card:nth-child(2) { animation-delay: 110ms; }
+    @media (max-width: 900px) { .sidebar { width: 210px; } main { margin-left: 210px; padding: 30px 27px 38px; } .profile-layout { grid-template-columns: 1fr; } .profile-summary { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 0 16px; text-align: left; } .avatar { grid-row: span 2; margin: 0; } .summary-email { align-self: start; } .division-display { grid-column: 1 / -1; width: 100%; } }
+    @media (max-width: 620px) {
+      .sidebar { position: relative; display: grid; width: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 10px 16px 8px; border-right: 0; border-bottom: 1px solid var(--line); transition: row-gap .25s ease; }
+      .brand { grid-column: 1 / -1; margin: 0 0 5px; padding: 0 48px 0 0; }
+      .brand-mark { width: 34px; height: 34px; border-radius: 11px; }
+      .nav-label, .sidebar-footer { display: none; }
+      .mobile-nav-toggle { position: absolute; top: 10px; right: 16px; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--navy-dark); transition: background .2s ease, transform .25s ease; }
+      .mobile-nav-toggle:hover { background: var(--pale); }
+      .mobile-nav-toggle svg { width: 19px; height: 19px; transition: transform .25s ease; }
+      .sidebar > .nav-link { max-height: 80px; overflow: hidden; transition: max-height .28s ease, padding .28s ease, opacity .2s ease, transform .24s ease, visibility 0s linear; }
+      .sidebar.is-collapsed { row-gap: 0; }
+      .sidebar.is-collapsed > .nav-link:not([hidden]) { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, 0s, 0s, .28s; }
+      .sidebar:not(.is-collapsed) .mobile-nav-toggle svg { transform: rotate(90deg); }
+      .nav-link { justify-content: center; gap: 6px; padding: 9px 5px; font-size: 11px; }
+      .nav-link svg { width: 16px; height: 16px; }
+      main { margin: 0; padding: 25px 16px 32px; }
+      .topbar { align-items: flex-start; margin-bottom: 21px; }
+      .topbar-date { max-width: 115px; text-align: right; line-height: 1.5; }
+      .form-card { padding: 19px 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar, .sidebar > .nav-link, .mobile-nav-toggle, .mobile-nav-toggle svg { transition-duration: .01ms !important; }
+      main > .topbar, .profile-layout > .card { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar is-collapsed" aria-label="Navigasi utama">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 3.75v3M17 3.75v3M4.5 9h15M6.5 5.5h11A2 2 0 0 1 19.5 7.5v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="m8.5 14 2.2 2.2 4.8-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div><div class="brand-name">Ruang Absen</div><div class="brand-caption">Portal absensi magang</div></div>
+    </div>
+    <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Buka navigasi" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <div class="nav-label">Menu utama</div>
+    <a class="nav-link" href="index.html#beranda">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Beranda
+    </a>
+    <a class="nav-link" href="index.html#absensi">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Absensi
+    </a>
+    <a class="nav-link" href="index.html#statistik">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V9m8 10V5m8 14v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Statistik
+    </a>
+    <a class="nav-link active" href="profil.html" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7"/><path d="M5 20a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      Profil
+    </a>
+    <a class="nav-link" href="index.html#info-magang">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V7l8-4 8 4v13M9 20v-6h6v6M8 9h.01M12 9h.01M16 9h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Info magang
+    </a>
+    <a class="nav-link" href="riwayat.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5.5h16M4 10h16M4 14.5h10M4 19h10M18 15v6m-3-3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      Riwayat absensi
+    </a>
+    <button class="nav-link" id="signOutButton" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Keluar
+    </button>
+    <div class="sidebar-footer">Ruang Absen · Magang</div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <div><p class="eyebrow">Data peserta</p><h1>Profil peserta</h1></div>
+      <div class="topbar-date" id="headerDate"></div>
+    </header>
+    <div class="profile-layout">
+      <section class="card profile-summary" aria-label="Ringkasan profil">
+        <div class="avatar" id="avatar">?</div>
+        <div class="summary-name" id="summaryName">Memuat profil...</div>
+        <div class="summary-email" id="summaryEmail"></div>
+        <div class="division-display">
+          <div class="division-label">Divisi magang</div>
+          <div class="division-name" id="divisionNameDisplay">Belum dipilih</div>
+          <div class="division-help">Divisi ini terhubung dengan profil akun kamu.</div>
+        </div>
+      </section>
+      <section class="card form-card" aria-labelledby="profileFormTitle">
+        <h2 id="profileFormTitle">Data diri dan divisi</h2>
+        <p>Perbarui informasi profil dan pilih divisi tempat kamu menjalani magang.</p>
+        <form id="profileForm">
+          <div class="field">
+            <label for="nameInput">Nama lengkap</label>
+            <input id="nameInput" name="name" autocomplete="name" maxlength="80" required>
+          </div>
+          <div class="field">
+            <label for="emailInput">Email akun</label>
+            <input id="emailInput" name="email" type="email" readonly>
+          </div>
+          <div class="field">
+            <label for="identityInput">NIM / NIS</label>
+            <input id="identityInput" name="identity" maxlength="40" placeholder="Nomor identitas sekolah/kampus">
+          </div>
+          <div class="field">
+            <label for="schoolInput">Instansi pendidikan</label>
+            <input id="schoolInput" name="school" maxlength="100" placeholder="Nama sekolah atau kampus">
+          </div>
+          <div class="field">
+            <label for="divisionSelect">Divisi magang</label>
+            <select id="divisionSelect" name="divisionId">
+              <option value="">Belum memilih divisi</option>
+            </select>
+          </div>
+          <div class="form-error" id="formError" role="alert"></div>
+          <div class="actions">
+            <a class="button" href="index.html">Kembali</a>
+            <button class="button button-primary" id="saveButton" type="submit">Simpan profil</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    (() => {
+      "use strict";
+      const API_URL = "api/index.php";
+      const $ = (id) => document.getElementById(id);
+      let csrfToken = "";
+      let profile = null;
+      let currentUser = null;
+      let divisions = [];
+      let toastTimeout;
+
+      function showToast(message) {
+        $("toast").textContent = message;
+        $("toast").classList.add("show");
+        window.clearTimeout(toastTimeout);
+        toastTimeout = window.setTimeout(() => $("toast").classList.remove("show"), 3500);
+      }
+
+      async function apiRequest(action, { method = "GET", data = null } = {}) {
+        const headers = { Accept: "application/json" };
+        if (data !== null) headers["Content-Type"] = "application/json";
+        if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+        const response = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, {
+          method,
+          headers,
+          credentials: "same-origin",
+          body: data === null ? undefined : JSON.stringify(data)
+        });
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("Respons server tidak valid. Periksa konfigurasi PHP.");
+        }
+        if (result.csrf) csrfToken = result.csrf;
+        if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+        return result;
+      }
+
+      function render() {
+        const name = profile?.name || "";
+        $("summaryName").textContent = name || "Lengkapi nama profil";
+        $("summaryEmail").textContent = currentUser?.email || "";
+        $("avatar").textContent = name ? name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() : "?";
+        $("divisionNameDisplay").textContent = profile?.divisionName || "Belum dipilih";
+        $("nameInput").value = profile?.name || "";
+        $("emailInput").value = currentUser?.email || "";
+        $("identityInput").value = profile?.identity || "";
+        $("schoolInput").value = profile?.school || "";
+        const select = $("divisionSelect");
+        select.replaceChildren(new Option("Belum memilih divisi", ""));
+        divisions.forEach((division) => select.add(new Option(division.name, String(division.id))));
+        select.value = profile?.divisionId ? String(profile.divisionId) : "";
+      }
+
+      $("profileForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        $("formError").textContent = "";
+        const button = $("saveButton");
+        button.disabled = true;
+        try {
+          const result = await apiRequest("profile", {
+            method: "POST",
+            data: {
+              name: $("nameInput").value.trim(),
+              identity: $("identityInput").value.trim(),
+              school: $("schoolInput").value.trim(),
+              divisionId: $("divisionSelect").value || null
+            }
+          });
+          profile = result.profile;
+          render();
+          showToast("Profil dan divisi berhasil disimpan.");
+        } catch (error) {
+          console.error("Tidak dapat menyimpan profil peserta.", error);
+          $("formError").textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      $("signOutButton").addEventListener("click", async () => {
+        const button = $("signOutButton");
+        button.disabled = true;
+        try {
+          await apiRequest("logout", { method: "POST", data: {} });
+          window.location.replace("login.html");
+        } catch (error) {
+          console.error("Tidak dapat keluar dari akun peserta.", error);
+          showToast(`Gagal keluar: ${error.message}`);
+          button.disabled = false;
+        }
+      });
+
+      $("headerDate").textContent = new Intl.DateTimeFormat("id-ID", {
+        timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric"
+      }).format(new Date());
+      const mobileNavToggle = $("mobileNavToggle");
+      mobileNavToggle.addEventListener("click", () => {
+        const isExpanded = mobileNavToggle.getAttribute("aria-expanded") === "true";
+        mobileNavToggle.setAttribute("aria-expanded", String(!isExpanded));
+        mobileNavToggle.setAttribute("aria-label", isExpanded ? "Buka navigasi" : "Tutup navigasi");
+        document.querySelector(".sidebar").classList.toggle("is-collapsed", isExpanded);
+      });
+      document.querySelectorAll(".sidebar > .nav-link").forEach((link) => {
+        link.addEventListener("click", () => {
+          if (window.matchMedia("(max-width: 620px)").matches) {
+            document.querySelector(".sidebar").classList.add("is-collapsed");
+            mobileNavToggle.setAttribute("aria-expanded", "false");
+            mobileNavToggle.setAttribute("aria-label", "Buka navigasi");
+          }
+        });
+      });
+      apiRequest("session").then((session) => {
+        if (!session.user) {
+          window.location.replace("login.html?next=profil.html");
+          return;
+        }
+        csrfToken = session.csrf || "";
+        currentUser = session.user;
+        $("signOutButton").hidden = false;
+        profile = session.profile || {};
+        divisions = session.divisions || [];
+        render();
+      }).catch((error) => {
+        console.error("Tidak dapat memuat profil peserta.", error);
+        $("formError").textContent = error.message;
+        $("summaryName").textContent = "Profil tidak dapat dimuat";
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#142a45">
-  <title>Kelola Divisi — Ruang Absen</title>
+  <title>Admin — Kelola Divisi</title>
   <style>
     :root {
       color-scheme: light;
@@ -32,6 +32,10 @@
     .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; color: #5d6d82; font-size: 13px; font-weight: 600; text-decoration: none; }
     .nav-link:hover, .nav-link.active { background: var(--pale); color: var(--navy-dark); }
     .nav-link svg { width: 18px; height: 18px; }
+    .mobile-nav-toggle { display: none; }
+    .sidebar button.nav-link { width: 100%; border: 0; background: transparent; text-align: left; }
+    .sidebar button.nav-link:hover { background: var(--pale); }
+    .sidebar .nav-link[hidden] { display: none; }
     .sidebar-footer { margin-top: auto; padding: 18px 9px 0; color: #8997aa; font-size: 10px; }
     main { max-width: 1180px; margin-left: 244px; padding: 35px 48px 48px; }
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; }
@@ -58,6 +62,20 @@
     .list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
     .list-heading h2 { margin: 0; font-size: 16px; }
     .list-count { color: var(--muted); font-size: 11px; }
+    .announcement-panel { margin-top: 18px; padding: 24px 26px; }
+    .announcement-panel h2 { margin: 0; font-size: 16px; }
+    .announcement-panel > p { margin: 7px 0 19px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .announcement-form { display: grid; gap: 12px; }
+    .announcement-form label { color: #46566e; font-size: 11px; font-weight: 650; }
+    .announcement-form input, .announcement-form select, .announcement-form textarea { width: 100%; min-height: 41px; padding: 10px 12px; border: 1px solid #d5dfeb; border-radius: 8px; outline: 0; background: white; color: var(--ink); font: inherit; font-size: 12px; }
+    .announcement-form textarea { min-height: 90px; resize: vertical; }
+    .announcement-form input:focus, .announcement-form select:focus, .announcement-form textarea:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    .announcement-items { display: grid; gap: 10px; margin-top: 18px; }
+    .announcement-item { display: flex; justify-content: space-between; gap: 14px; padding: 13px 0; border-top: 1px solid #edf1f6; }
+    .announcement-title { font-size: 12px; font-weight: 700; }
+    .announcement-meta { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .announcement-body { margin-top: 7px; color: #46566e; font-size: 11px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .announcement-actions { display: flex; flex: 0 0 auto; align-items: start; gap: 6px; }
     .division-list { margin: 0; padding: 0; list-style: none; }
     .division-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid #edf1f6; }
     .division-item:last-child { border-bottom: 0; }
@@ -67,49 +85,69 @@
     .empty-state { padding: 24px 0; color: var(--muted); font-size: 12px; text-align: center; }
     .toast { position: fixed; right: 24px; bottom: 24px; z-index: 5; max-width: calc(100vw - 32px); padding: 12px 16px; transform: translateY(16px); border-radius: 10px; background: var(--navy-dark); color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
     .toast.show { transform: translateY(0); opacity: 1; }
+    @keyframes page-enter { from { opacity: 0; transform: translateY(24px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+    main > .topbar { animation: page-enter .72s cubic-bezier(.16, 1, .3, 1) both; }
+    main > .card { animation: page-enter .78s cubic-bezier(.16, 1, .3, 1) both; }
+    main > .card:nth-of-type(3) { animation-delay: 110ms; }
     @media (max-width: 900px) { .sidebar { width: 210px; } main { margin-left: 210px; padding: 30px 27px 38px; } }
     @media (max-width: 620px) {
-      .sidebar { position: static; display: grid; width: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 10px 16px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
-      .brand { grid-column: 1 / -1; margin: 0 0 5px; padding: 0; }
+      .sidebar { position: relative; display: grid; width: auto; grid-template-columns: 1fr 1fr; gap: 4px; padding: 10px 16px 8px; border-right: 0; border-bottom: 1px solid var(--line); transition: row-gap .25s ease; }
+      .brand { grid-column: 1 / -1; margin: 0 0 5px; padding: 0 48px 0 0; }
       .brand-mark { width: 34px; height: 34px; border-radius: 11px; }
       .nav-label, .sidebar-footer { display: none; }
+      .mobile-nav-toggle { position: absolute; top: 10px; right: 16px; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--navy-dark); transition: background .2s ease, transform .25s ease; }
+      .mobile-nav-toggle:hover { background: var(--pale); }
+      .mobile-nav-toggle svg { width: 19px; height: 19px; transition: transform .25s ease; }
+      .sidebar > .nav-link { max-height: 80px; overflow: hidden; transition: max-height .28s ease, padding .28s ease, opacity .2s ease, transform .24s ease, visibility 0s linear; }
+      .sidebar.is-collapsed { row-gap: 0; }
+      .sidebar.is-collapsed > .nav-link:not([hidden]) { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, 0s, 0s, .28s; }
+      .sidebar:not(.is-collapsed) .mobile-nav-toggle svg { transform: rotate(90deg); }
       .nav-link { justify-content: center; gap: 6px; padding: 9px 5px; font-size: 11px; }
       .nav-link svg { width: 16px; height: 16px; }
       main { margin: 0; padding: 25px 16px 32px; }
       .topbar { align-items: flex-start; margin-bottom: 21px; }
       .topbar-date { max-width: 115px; text-align: right; line-height: 1.5; }
       .panel, .list-panel { padding: 19px 16px 10px; }
+      .announcement-panel { padding: 19px 16px 15px; }
+      .announcement-item { flex-direction: column; }
+      .announcement-actions { justify-content: flex-end; }
       .form-row { align-items: stretch; flex-direction: column; }
       .form-row .button { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar, .sidebar > .nav-link, .mobile-nav-toggle, .mobile-nav-toggle svg { transition-duration: .01ms !important; }
+      main > .topbar, main > .card { animation: none !important; }
     }
   </style>
 </head>
 <body>
-  <aside class="sidebar" aria-label="Navigasi utama">
+  <aside class="sidebar is-collapsed" aria-label="Navigasi utama">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none"><path d="M7 3.75v3M17 3.75v3M4.5 9h15M6.5 5.5h11A2 2 0 0 1 19.5 7.5v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="m8.5 14 2.2 2.2 4.8-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div><div class="brand-name">Ruang Absen</div><div class="brand-caption">Portal absensi magang</div></div>
     </div>
-    <div class="nav-label">Menu utama</div>
-    <a class="nav-link" href="index.html#beranda">Beranda</a>
-    <a class="nav-link" href="index.html#absensi">Absensi</a>
-    <a class="nav-link" href="index.html#statistik">Statistik</a>
-    <a class="nav-link" href="index.html#profil">Profil</a>
-    <a class="nav-link" href="index.html#info-magang">Info magang</a>
-    <a class="nav-link" href="riwayat.html">Riwayat absensi</a>
-    <a class="nav-link active" href="divisi.html" aria-current="page">Kelola divisi</a>
+    <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Buka navigasi" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <div class="nav-label">Administrator</div>
+    <a class="nav-link" href="riwayat.html">Kelola riwayat absensi</a>
+    <a class="nav-link active" href="divisi.html" aria-current="page">Admin · Kelola divisi</a>
+    <button class="nav-link" id="signOutButton" type="button">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Keluar
+    </button>
     <div class="sidebar-footer">Ruang Absen · Magang</div>
   </aside>
   <main>
     <header class="topbar">
-      <div><p class="eyebrow">Data magang bersama</p><h1>Kelola divisi</h1></div>
+      <div><p class="eyebrow">Panel administrator</p><h1>Kelola divisi</h1></div>
       <div class="topbar-date" id="headerDate"></div>
     </header>
     <section class="card panel" aria-labelledby="formTitle">
       <h2 id="formTitle">Tambah divisi</h2>
-      <p>Nama divisi yang ditambahkan akan terlihat oleh semua peserta. Semua peserta dapat menambah, mengubah, atau menghapus daftar ini.</p>
+      <p>Tambah, ubah, atau hapus divisi yang tersedia bagi peserta. Perubahan pada divisi akan langsung berlaku untuk seluruh akun.</p>
       <form id="divisionForm">
         <div class="form-row">
           <div class="field">
@@ -125,6 +163,23 @@
       <div class="list-heading"><h2 id="listTitle">Daftar divisi</h2><span class="list-count" id="listCount">0 divisi</span></div>
       <ul class="division-list" id="divisionList" aria-live="polite"><li class="empty-state">Memuat divisi...</li></ul>
     </section>
+    <section class="card announcement-panel" aria-labelledby="announcementPanelTitle">
+      <h2 id="announcementPanelTitle">Pengumuman divisi</h2>
+      <p>Publikasikan informasi untuk peserta dalam satu divisi. Pengumuman akan muncul di halaman utama peserta terkait.</p>
+      <form class="announcement-form" id="announcementForm">
+        <label for="announcementTitleInput">Judul pengumuman</label>
+        <input id="announcementTitleInput" maxlength="120" required>
+        <label for="announcementDivisionInput">Divisi tujuan</label>
+        <select id="announcementDivisionInput" required></select>
+        <label for="announcementBodyInput">Isi pengumuman</label>
+        <textarea id="announcementBodyInput" maxlength="3000" required></textarea>
+        <div class="form-error" id="announcementError" role="alert"></div>
+        <button class="button button-primary" id="announcementSaveButton" type="submit">Terbitkan pengumuman</button>
+      </form>
+      <div class="announcement-items" id="announcementItems" aria-live="polite">
+        <div class="empty-state">Memuat pengumuman...</div>
+      </div>
+    </section>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
@@ -134,7 +189,9 @@
       const $ = (id) => document.getElementById(id);
       let csrfToken = "";
       let divisions = [];
+      let announcements = [];
       let editingId = null;
+      let editingAnnouncementId = null;
       let toastTimeout;
 
       function showToast(message) {
@@ -211,6 +268,75 @@
           item.append(info, actions);
           list.append(item);
         });
+        const divisionSelect = $("announcementDivisionInput");
+        const selectedDivision = divisionSelect.value;
+        divisionSelect.replaceChildren(new Option("Pilih divisi", ""));
+        divisions.forEach((division) => divisionSelect.add(new Option(division.name, String(division.id))));
+        divisionSelect.value = divisions.some((division) => String(division.id) === selectedDivision) ? selectedDivision : "";
+      }
+
+      function renderAnnouncements() {
+        const list = $("announcementItems");
+        list.replaceChildren();
+        if (!announcements.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = "Belum ada pengumuman.";
+          list.append(empty);
+          return;
+        }
+        announcements.forEach((announcement) => {
+          const item = document.createElement("article");
+          item.className = "announcement-item";
+          const info = document.createElement("div");
+          const title = document.createElement("div");
+          title.className = "announcement-title";
+          title.textContent = announcement.title;
+          const meta = document.createElement("div");
+          meta.className = "announcement-meta";
+          meta.textContent = `${announcement.divisionName} · ${new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" }).format(new Date(announcement.createdAt.replace(" ", "T") + "+07:00"))}`;
+          const body = document.createElement("div");
+          body.className = "announcement-body";
+          body.textContent = announcement.body;
+          info.append(title, meta, body);
+          const actions = document.createElement("div");
+          actions.className = "announcement-actions";
+          const edit = document.createElement("button");
+          edit.className = "button";
+          edit.type = "button";
+          edit.textContent = "Ubah";
+          edit.addEventListener("click", () => {
+            editingAnnouncementId = announcement.id;
+            $("announcementTitleInput").value = announcement.title;
+            $("announcementDivisionInput").value = String(announcement.divisionId);
+            $("announcementBodyInput").value = announcement.body;
+            $("announcementSaveButton").textContent = "Simpan perubahan";
+            $("announcementError").textContent = "";
+            $("announcementTitleInput").focus();
+            window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+          });
+          const remove = document.createElement("button");
+          remove.className = "button";
+          remove.type = "button";
+          remove.textContent = "Hapus";
+          remove.addEventListener("click", () => deleteAnnouncement(announcement));
+          actions.append(edit, remove);
+          item.append(info, actions);
+          list.append(item);
+        });
+      }
+
+      async function deleteAnnouncement(announcement) {
+        if (!window.confirm(`Hapus pengumuman "${announcement.title}"?`)) return;
+        try {
+          const result = await apiRequest("announcement", { method: "POST", data: { operation: "delete", id: announcement.id } });
+          announcements = result.announcements;
+          renderAnnouncements();
+          showToast("Pengumuman berhasil dihapus.");
+        } catch (error) {
+          console.error("Tidak dapat menghapus pengumuman.", error);
+          showToast(error.message);
+        }
       }
 
       async function deleteDivision(division) {
@@ -219,6 +345,8 @@
           const result = await apiRequest("division", { method: "POST", data: { operation: "delete", id: division.id } });
           divisions = result.divisions;
           renderDivisions();
+          announcements = announcements.filter((item) => item.divisionId !== division.id);
+          renderAnnouncements();
           showToast("Divisi berhasil dihapus.");
         } catch (error) {
           console.error("Tidak dapat menghapus divisi.", error);
@@ -251,21 +379,93 @@
         }
       });
 
+      $("announcementForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        $("announcementError").textContent = "";
+        const button = $("announcementSaveButton");
+        button.disabled = true;
+        try {
+          const result = await apiRequest("announcement", {
+            method: "POST",
+            data: {
+              operation: editingAnnouncementId ? "update" : "create",
+              id: editingAnnouncementId,
+              title: $("announcementTitleInput").value.trim(),
+              divisionId: $("announcementDivisionInput").value,
+              body: $("announcementBodyInput").value.trim()
+            }
+          });
+          announcements = result.announcements;
+          renderAnnouncements();
+          $("announcementForm").reset();
+          editingAnnouncementId = null;
+          button.textContent = "Terbitkan pengumuman";
+          showToast("Pengumuman berhasil disimpan.");
+        } catch (error) {
+          console.error("Tidak dapat menyimpan pengumuman.", error);
+          $("announcementError").textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
       $("headerDate").textContent = new Intl.DateTimeFormat("id-ID", {
         timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric"
       }).format(new Date());
       apiRequest("session").then((session) => {
         if (!session.user) {
-          window.location.replace("index.html");
+          window.location.replace("login.html?next=divisi.html");
+          return;
+        }
+        if (session.user.role !== "admin") {
+          window.location.replace("index.html?access=admin-required");
           return;
         }
         csrfToken = session.csrf || "";
         divisions = session.divisions || [];
         renderDivisions();
+        apiRequest("announcements").then((result) => {
+          announcements = result.announcements;
+          renderAnnouncements();
+        }).catch((error) => {
+          console.error("Tidak dapat memuat pengumuman.", error);
+          $("announcementItems").replaceChildren(Object.assign(document.createElement("div"), {
+            className: "empty-state",
+            textContent: `Pengumuman tidak dapat dimuat: ${error.message}`
+          }));
+        });
       }).catch((error) => {
         console.error("Tidak dapat memuat sesi dan divisi.", error);
         $("divisionList").innerHTML = "";
         $("divisionList").append(Object.assign(document.createElement("li"), { className: "empty-state", textContent: error.message }));
+        $("announcementItems").replaceChildren(Object.assign(document.createElement("div"), { className: "empty-state", textContent: error.message }));
+      });
+      const mobileNavToggle = $("mobileNavToggle");
+      mobileNavToggle.addEventListener("click", () => {
+        const isExpanded = mobileNavToggle.getAttribute("aria-expanded") === "true";
+        mobileNavToggle.setAttribute("aria-expanded", String(!isExpanded));
+        mobileNavToggle.setAttribute("aria-label", isExpanded ? "Buka navigasi" : "Tutup navigasi");
+        document.querySelector(".sidebar").classList.toggle("is-collapsed", isExpanded);
+      });
+      document.querySelectorAll(".sidebar > .nav-link").forEach((link) => {
+        link.addEventListener("click", () => {
+          if (window.matchMedia("(max-width: 620px)").matches) {
+            document.querySelector(".sidebar").classList.add("is-collapsed");
+            mobileNavToggle.setAttribute("aria-expanded", "false");
+            mobileNavToggle.setAttribute("aria-label", "Buka navigasi");
+          }
+        });
+      });
+      $("signOutButton").addEventListener("click", async () => {
+        $("signOutButton").disabled = true;
+        try {
+          await apiRequest("logout", { method: "POST", data: {} });
+          window.location.replace("login.html");
+        } catch (error) {
+          console.error("Tidak dapat keluar dari akun administrator.", error);
+          showToast(`Gagal keluar: ${error.message}`);
+          $("signOutButton").disabled = false;
+        }
       });
     })();
   </script>

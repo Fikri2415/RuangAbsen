@@ -4,6 +4,14 @@ Options -Indexes
     Require all denied
 </Files>
 
+<Files "reminder-config.php">
+    Require all denied
+</Files>
+
 <Files "create-user.php">
+    Require all denied
+</Files>
+
+<Files "send-reminders.php">
     Require all denied
 </Files>

@@ -46,6 +46,15 @@ function requireUserId(): int
     return $userId;
 }
 
+function requireAdmin(PDO $db, int $userId): void
+{
+    $statement = $db->prepare('SELECT role FROM users WHERE id = ?');
+    $statement->execute([$userId]);
+    if ($statement->fetchColumn() !== 'admin') {
+        respond(['error' => 'Akses ditolak. Tindakan ini hanya tersedia untuk admin.'], 403);
+    }
+}
+
 function readJsonBody(): array
 {
     $raw = file_get_contents('php://input');
@@ -62,7 +71,7 @@ function readJsonBody(): array
 function fetchRecords(PDO $db): array
 {
     $result = $db->query(
-        "SELECT a.user_id AS userId, CAST(a.work_date AS CHAR) AS workDate,
+        "SELECT a.id AS attendanceId, a.user_id AS userId, CAST(a.work_date AS CHAR) AS workDate,
                 u.name, u.identity_number AS identityNumber, a.check_in AS checkIn, a.check_out AS checkOut,
                 a.attendance_status AS attendanceStatus, a.attendance_note AS attendanceNote
          FROM attendances AS a
@@ -71,6 +80,7 @@ function fetchRecords(PDO $db): array
     );
     return array_map(static function (array $row): array {
         return [
+            'attendanceId' => (int) $row['attendanceId'],
             'userId' => (int) $row['userId'],
             'date' => $row['workDate'],
             'name' => $row['name'],
@@ -90,6 +100,77 @@ function fetchDivisions(PDO $db): array
         'id' => (int) $row['id'],
         'name' => $row['name'],
     ], $result->fetchAll());
+}
+
+function fetchAnnouncements(PDO $db, int $userId, bool $isAdmin): array
+{
+    if ($isAdmin) {
+        $statement = $db->query(
+            'SELECT n.id, n.title, n.body, n.division_id AS divisionId, d.name AS divisionName,
+                    n.created_at AS createdAt, n.updated_at AS updatedAt
+             FROM announcements AS n
+             INNER JOIN divisions AS d ON d.id = n.division_id
+             ORDER BY n.created_at DESC, n.id DESC'
+        );
+    } else {
+        $statement = $db->prepare(
+            'SELECT n.id, n.title, n.body, n.division_id AS divisionId, d.name AS divisionName,
+                    n.created_at AS createdAt, n.updated_at AS updatedAt
+             FROM announcements AS n
+             INNER JOIN divisions AS d ON d.id = n.division_id
+             INNER JOIN users AS u ON u.division_id = n.division_id
+             WHERE u.id = ?
+             ORDER BY n.created_at DESC, n.id DESC'
+        );
+        $statement->execute([$userId]);
+    }
+    return array_map(static fn (array $row): array => [
+        'id' => (int) $row['id'],
+        'title' => $row['title'],
+        'body' => $row['body'],
+        'divisionId' => (int) $row['divisionId'],
+        'divisionName' => $row['divisionName'],
+        'createdAt' => $row['createdAt'],
+        'updatedAt' => $row['updatedAt'],
+    ], $statement->fetchAll());
+}
+
+function fetchActivityLogs(PDO $db, int $userId, bool $isAdmin): array
+{
+    $sql = 'SELECT l.id, l.user_id AS userId, CAST(l.work_date AS CHAR) AS workDate,
+                   l.activity, l.created_at AS createdAt, l.updated_at AS updatedAt,
+                   u.name, u.identity_number AS identityNumber, d.name AS divisionName
+            FROM activity_logs AS l
+            INNER JOIN users AS u ON u.id = l.user_id
+            LEFT JOIN divisions AS d ON d.id = u.division_id';
+    if (!$isAdmin) {
+        $sql .= ' WHERE l.user_id = ?';
+    }
+    $sql .= ' ORDER BY l.work_date DESC, u.name ASC';
+    $statement = $db->prepare($sql);
+    $statement->execute($isAdmin ? [] : [$userId]);
+    return array_map(static fn (array $row): array => [
+        'id' => (int) $row['id'],
+        'userId' => (int) $row['userId'],
+        'date' => $row['workDate'],
+        'activity' => $row['activity'],
+        'name' => $row['name'],
+        'identity' => $row['identityNumber'],
+        'divisionName' => $row['divisionName'],
+        'createdAt' => $row['createdAt'],
+        'updatedAt' => $row['updatedAt'],
+    ], $statement->fetchAll());
+}
+
+function profileFromRow(array $row): array
+{
+    return [
+        'name' => $row['name'],
+        'identity' => $row['identity_number'],
+        'school' => $row['school'],
+        'divisionId' => $row['division_id'] === null ? null : (int) $row['division_id'],
+        'divisionName' => $row['division_name'],
+    ];
 }
 
 try {
@@ -120,7 +201,10 @@ try {
         if (!is_int($userId) || $userId < 1) {
             respond(['csrf' => $_SESSION['csrf_token'], 'user' => null, 'profile' => null, 'records' => [], 'divisions' => []]);
         }
-        $statement = $db->prepare('SELECT id, email, name, identity_number, school FROM users WHERE id = ?');
+        $statement = $db->prepare(
+            'SELECT u.id, u.email, u.role, u.name, u.identity_number, u.school, u.division_id, d.name AS division_name
+             FROM users AS u LEFT JOIN divisions AS d ON d.id = u.division_id WHERE u.id = ?'
+        );
         $statement->execute([$userId]);
         $user = $statement->fetch();
         if (!$user) {
@@ -129,14 +213,10 @@ try {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             respond(['csrf' => $_SESSION['csrf_token'], 'user' => null, 'profile' => null, 'records' => [], 'divisions' => []]);
         }
-        $profile = [
-            'name' => $user['name'],
-            'identity' => $user['identity_number'],
-            'school' => $user['school'],
-        ];
+        $profile = profileFromRow($user);
         respond([
             'csrf' => $_SESSION['csrf_token'],
-            'user' => ['id' => (int) $user['id'], 'email' => $user['email']],
+            'user' => ['id' => (int) $user['id'], 'email' => $user['email'], 'role' => $user['role']],
             'profile' => $profile,
             'records' => fetchRecords($db),
             'divisions' => fetchDivisions($db),
@@ -153,6 +233,37 @@ try {
         respond(['divisions' => fetchDivisions($db)]);
     }
 
+    if ($method === 'GET' && $action === 'admin-participants') {
+        $userId = requireUserId();
+        requireAdmin($db, $userId);
+        $participants = $db->query(
+            "SELECT id, name, email, identity_number
+             FROM users WHERE role = 'participant' ORDER BY name ASC"
+        )->fetchAll();
+        respond(['participants' => array_map(static fn (array $participant): array => [
+            'id' => (int) $participant['id'],
+            'name' => $participant['name'],
+            'email' => $participant['email'],
+            'identity' => $participant['identity_number'],
+        ], $participants)]);
+    }
+
+    if ($method === 'GET' && $action === 'announcements') {
+        $userId = requireUserId();
+        $roleQuery = $db->prepare('SELECT role FROM users WHERE id = ?');
+        $roleQuery->execute([$userId]);
+        $isAdmin = $roleQuery->fetchColumn() === 'admin';
+        respond(['announcements' => fetchAnnouncements($db, $userId, $isAdmin)]);
+    }
+
+    if ($method === 'GET' && $action === 'activity-logs') {
+        $userId = requireUserId();
+        $roleQuery = $db->prepare('SELECT role FROM users WHERE id = ?');
+        $roleQuery->execute([$userId]);
+        $isAdmin = $roleQuery->fetchColumn() === 'admin';
+        respond(['activities' => fetchActivityLogs($db, $userId, $isAdmin)]);
+    }
+
     if ($method !== 'POST') {
         header('Allow: GET, POST');
         respond(['error' => 'Metode permintaan tidak didukung.'], 405);
@@ -167,7 +278,11 @@ try {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254 || $password === '' || strlen($password) > 1024) {
             respond(['error' => 'Email atau kata sandi tidak valid.'], 422);
         }
-        $statement = $db->prepare('SELECT id, email, password_hash, name, identity_number, school FROM users WHERE email = ?');
+        $statement = $db->prepare(
+            'SELECT u.id, u.email, u.password_hash, u.role, u.name, u.identity_number, u.school, u.division_id,
+                    d.name AS division_name
+             FROM users AS u LEFT JOIN divisions AS d ON d.id = u.division_id WHERE u.email = ?'
+        );
         $statement->execute([$email]);
         $user = $statement->fetch();
         if ($user && $user['password_hash'] === null) {
@@ -182,12 +297,8 @@ try {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         respond([
             'csrf' => $_SESSION['csrf_token'],
-            'user' => ['id' => (int) $user['id'], 'email' => $user['email']],
-            'profile' => [
-                'name' => $user['name'],
-                'identity' => $user['identity_number'],
-                'school' => $user['school'],
-            ],
+            'user' => ['id' => (int) $user['id'], 'email' => $user['email'], 'role' => $user['role']],
+            'profile' => profileFromRow($user),
             'records' => fetchRecords($db),
             'divisions' => fetchDivisions($db),
         ]);
@@ -202,19 +313,225 @@ try {
 
     $userId = requireUserId();
 
+    if ($action === 'announcement') {
+        requireAdmin($db, $userId);
+        $operation = $data['operation'] ?? '';
+        if (!is_string($operation) || !in_array($operation, ['create', 'update', 'delete'], true)) {
+            respond(['error' => 'Aksi pengumuman tidak valid.'], 422);
+        }
+        if ($operation === 'delete') {
+            $id = filter_var($data['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false) {
+                respond(['error' => 'Pilih pengumuman yang valid.'], 422);
+            }
+            $delete = $db->prepare('DELETE FROM announcements WHERE id = ?');
+            $delete->execute([$id]);
+            if ($delete->rowCount() !== 1) {
+                respond(['error' => 'Pengumuman tidak ditemukan atau sudah dihapus.'], 404);
+            }
+            respond(['announcements' => fetchAnnouncements($db, $userId, true)]);
+        }
+
+        $title = $data['title'] ?? null;
+        $body = $data['body'] ?? null;
+        $divisionId = filter_var($data['divisionId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if (!is_string($title) || !is_string($body) || $divisionId === false) {
+            respond(['error' => 'Lengkapi judul, isi pengumuman, dan divisi tujuan.'], 422);
+        }
+        $title = trim($title);
+        $body = trim($body);
+        if ($title === '' || mb_strlen($title) > 120 || $body === '' || mb_strlen($body) > 3000) {
+            respond(['error' => 'Judul wajib diisi (maksimal 120 karakter) dan isi pengumuman maksimal 3000 karakter.'], 422);
+        }
+        $divisionCheck = $db->prepare('SELECT 1 FROM divisions WHERE id = ?');
+        $divisionCheck->execute([$divisionId]);
+        if (!$divisionCheck->fetchColumn()) {
+            respond(['error' => 'Divisi tujuan tidak ditemukan. Muat ulang lalu pilih divisi lain.'], 404);
+        }
+        if ($operation === 'create') {
+            $statement = $db->prepare(
+                'INSERT INTO announcements (title, body, division_id, created_by) VALUES (?, ?, ?, ?)'
+            );
+            $statement->execute([$title, $body, $divisionId, $userId]);
+        } else {
+            $id = filter_var($data['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false) {
+                respond(['error' => 'Pilih pengumuman yang valid.'], 422);
+            }
+            $statement = $db->prepare(
+                'UPDATE announcements SET title = ?, body = ?, division_id = ? WHERE id = ?'
+            );
+            $statement->execute([$title, $body, $divisionId, $id]);
+            if ($statement->rowCount() === 0) {
+                $exists = $db->prepare('SELECT 1 FROM announcements WHERE id = ?');
+                $exists->execute([$id]);
+                if (!$exists->fetchColumn()) {
+                    respond(['error' => 'Pengumuman tidak ditemukan.'], 404);
+                }
+            }
+        }
+        respond(['announcements' => fetchAnnouncements($db, $userId, true)]);
+    }
+
+    if ($action === 'activity-log') {
+        $roleQuery = $db->prepare('SELECT role FROM users WHERE id = ?');
+        $roleQuery->execute([$userId]);
+        if ($roleQuery->fetchColumn() !== 'participant') {
+            respond(['error' => 'Hanya peserta yang dapat mengisi log aktivitas harian.'], 403);
+        }
+        $date = $data['date'] ?? null;
+        $activity = $data['activity'] ?? null;
+        if (!is_string($date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)
+            || !is_string($activity) || trim($activity) === '' || mb_strlen(trim($activity)) > 3000) {
+            respond(['error' => 'Tanggal dan catatan aktivitas wajib diisi. Catatan maksimal 3000 karakter.'], 422);
+        }
+        $dateValue = DateTimeImmutable::createFromFormat('!Y-m-d', $date, new DateTimeZone('Asia/Jakarta'));
+        $dateErrors = DateTimeImmutable::getLastErrors();
+        if (!$dateValue || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0))
+            || $dateValue->format('Y-m-d') !== $date) {
+            respond(['error' => 'Tanggal aktivitas tidak valid.'], 422);
+        }
+        if ($date > $db->query('SELECT CURRENT_DATE()')->fetchColumn()) {
+            respond(['error' => 'Tanggal aktivitas tidak boleh melewati hari ini.'], 422);
+        }
+        $statement = $db->prepare(
+            'INSERT INTO activity_logs (user_id, work_date, activity) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE activity = VALUES(activity)'
+        );
+        $statement->execute([$userId, $date, trim($activity)]);
+        respond(['activities' => fetchActivityLogs($db, $userId, false)]);
+    }
+
+    if ($action === 'admin-attendance') {
+        requireAdmin($db, $userId);
+        $attendanceId = filter_var($data['attendanceId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $participantId = filter_var($data['userId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $date = $data['date'] ?? null;
+        $status = $data['status'] ?? null;
+        $checkIn = $data['checkIn'] ?? '';
+        $checkOut = $data['checkOut'] ?? '';
+        $note = $data['attendanceNote'] ?? '';
+
+        if ($attendanceId === false || $participantId === false
+            || !is_string($date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)
+            || !is_string($status) || !in_array($status, ['present', 'sick', 'absent'], true)
+            || !is_string($checkIn) || !is_string($checkOut) || !is_string($note)
+            || mb_strlen($note) > 255) {
+            respond(['error' => 'Data absensi tidak valid. Periksa tanggal, peserta, status, jam, dan keterangan.'], 422);
+        }
+
+        $dateValue = DateTimeImmutable::createFromFormat('!Y-m-d', $date, new DateTimeZone('Asia/Jakarta'));
+        $dateErrors = DateTimeImmutable::getLastErrors();
+        if (!$dateValue || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0))
+            || $dateValue->format('Y-m-d') !== $date) {
+            respond(['error' => 'Tanggal absensi tidak valid.'], 422);
+        }
+
+        $timePattern = '/^(?:[01]\d|2[0-3]):[0-5]\d$/';
+        if (($checkIn !== '' && !preg_match($timePattern, $checkIn))
+            || ($checkOut !== '' && !preg_match($timePattern, $checkOut))) {
+            respond(['error' => 'Jam masuk dan pulang harus menggunakan format waktu yang valid.'], 422);
+        }
+        if ($status === 'present' && $checkIn === '') {
+            respond(['error' => 'Jam masuk wajib diisi untuk status Hadir.'], 422);
+        }
+        if ($status === 'present' && $checkOut !== '' && $checkOut < $checkIn) {
+            respond(['error' => 'Jam pulang tidak boleh lebih awal dari jam masuk.'], 422);
+        }
+        if ($status !== 'present') {
+            $checkIn = '';
+            $checkOut = '';
+        }
+
+        $participantCheck = $db->prepare("SELECT 1 FROM users WHERE id = ? AND role = 'participant'");
+        $participantCheck->execute([$participantId]);
+        if (!$participantCheck->fetchColumn()) {
+            respond(['error' => 'Akun peserta yang dipilih tidak ditemukan.'], 404);
+        }
+        $recordCheck = $db->prepare('SELECT 1 FROM attendances WHERE id = ?');
+        $recordCheck->execute([$attendanceId]);
+        if (!$recordCheck->fetchColumn()) {
+            respond(['error' => 'Catatan absensi tidak ditemukan. Muat ulang riwayat lalu coba lagi.'], 404);
+        }
+
+        try {
+            $update = $db->prepare(
+                'UPDATE attendances
+                 SET user_id = ?, work_date = ?, check_in = ?, check_out = ?,
+                     attendance_status = ?, attendance_note = ?
+                 WHERE id = ?'
+            );
+            $update->execute([
+                $participantId,
+                $date,
+                $checkIn === '' ? null : $date . ' ' . $checkIn . ':00',
+                $checkOut === '' ? null : $date . ' ' . $checkOut . ':00',
+                $status,
+                trim($note),
+                $attendanceId,
+            ]);
+        } catch (PDOException $error) {
+            if ((int) ($error->errorInfo[1] ?? 0) === 1062) {
+                respond(['error' => 'Peserta tersebut sudah memiliki catatan absensi pada tanggal yang dipilih.'], 409);
+            }
+            throw $error;
+        }
+        respond(['records' => fetchRecords($db)]);
+    }
+
+    if ($action === 'admin-delete-attendance') {
+        requireAdmin($db, $userId);
+        $attendanceId = filter_var($data['attendanceId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($attendanceId === false) {
+            respond(['error' => 'Catatan absensi yang dipilih tidak valid.'], 422);
+        }
+        $delete = $db->prepare('DELETE FROM attendances WHERE id = ?');
+        $delete->execute([$attendanceId]);
+        if ($delete->rowCount() !== 1) {
+            respond(['error' => 'Catatan absensi tidak ditemukan atau sudah dihapus. Muat ulang riwayat lalu coba lagi.'], 404);
+        }
+        respond(['records' => fetchRecords($db)]);
+    }
+
     if ($action === 'profile') {
         $name = trim((string) ($data['name'] ?? ''));
         $identity = trim((string) ($data['identity'] ?? ''));
         $school = trim((string) ($data['school'] ?? ''));
+        $rawDivisionId = $data['divisionId'] ?? null;
+        if ($rawDivisionId === '' || $rawDivisionId === null) {
+            $divisionId = null;
+        } else {
+            $divisionId = filter_var($rawDivisionId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($divisionId === false) {
+                respond(['error' => 'Pilih divisi yang tersedia atau kosongkan pilihan.'], 422);
+            }
+        }
         if ($name === '' || mb_strlen($name) > 80 || mb_strlen($identity) > 40 || mb_strlen($school) > 100) {
             respond(['error' => 'Periksa nama dan data profil. Batas nama 80 karakter, NIM/NIS 40, dan sekolah 100.'], 422);
         }
-        $statement = $db->prepare('UPDATE users SET name = ?, identity_number = ?, school = ? WHERE id = ?');
-        $statement->execute([$name, $identity, $school, $userId]);
-        respond(['profile' => ['name' => $name, 'identity' => $identity, 'school' => $school]]);
+        if ($divisionId !== null) {
+            $divisionCheck = $db->prepare('SELECT 1 FROM divisions WHERE id = ?');
+            $divisionCheck->execute([$divisionId]);
+            if (!$divisionCheck->fetchColumn()) {
+                respond(['error' => 'Divisi yang dipilih sudah tidak tersedia. Muat ulang halaman lalu pilih divisi lain.'], 422);
+            }
+        }
+        $statement = $db->prepare('UPDATE users SET name = ?, identity_number = ?, school = ?, division_id = ? WHERE id = ?');
+        $statement->execute([$name, $identity, $school, $divisionId, $userId]);
+        $profileQuery = $db->prepare(
+            'SELECT u.name, u.identity_number, u.school, u.division_id, d.name AS division_name
+             FROM users AS u LEFT JOIN divisions AS d ON d.id = u.division_id WHERE u.id = ?'
+        );
+        $profileQuery->execute([$userId]);
+        $updatedProfile = $profileQuery->fetch();
+        if (!$updatedProfile) {
+            respond(['error' => 'Profil tidak ditemukan setelah disimpan.'], 500);
+        }
+        respond(['profile' => profileFromRow($updatedProfile)]);
     }
 
     if ($action === 'division') {
+        requireAdmin($db, $userId);
         $operation = $data['operation'] ?? '';
         if (!is_string($operation) || !in_array($operation, ['create', 'update', 'delete'], true)) {
             respond(['error' => 'Aksi pengelolaan divisi tidak valid.'], 422);
@@ -228,6 +545,8 @@ try {
         }
 
         if ($operation === 'delete') {
+            $unassign = $db->prepare('UPDATE users SET division_id = NULL WHERE division_id = ?');
+            $unassign->execute([$id]);
             $statement = $db->prepare('DELETE FROM divisions WHERE id = ?');
             $statement->execute([$id]);
             if ($statement->rowCount() !== 1) {
@@ -345,7 +664,7 @@ try {
             respond(['error' => 'Tabel database belum ditemukan. Untuk database baru, impor database.sql; untuk database lama, jalankan migrasi database yang diperlukan.'], 503);
         }
         if ($driverCode === 1054 || $sqlState === '42S22') {
-            respond(['error' => 'Struktur tabel MySQL belum sesuai. Impor database.sql untuk database baru atau jalankan database-migration-absence.sql untuk database lama.'], 503);
+            respond(['error' => 'Struktur database belum sesuai. Untuk database baru, impor database.sql. Untuk database lama, jalankan setiap migrasi yang belum diterapkan, termasuk database-migration-admin-divisions.sql untuk role administrator.'], 503);
         }
     }
 
