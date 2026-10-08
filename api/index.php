@@ -146,7 +146,7 @@ function fetchActivityLogs(PDO $db, int $userId, bool $isAdmin): array
     if (!$isAdmin) {
         $sql .= ' WHERE l.user_id = ?';
     }
-    $sql .= ' ORDER BY l.work_date DESC, u.name ASC';
+    $sql .= ' ORDER BY l.work_date DESC, l.created_at DESC, l.id DESC, u.name ASC';
     $statement = $db->prepare($sql);
     $statement->execute($isAdmin ? [] : [$userId]);
     return array_map(static fn (array $row): array => [
@@ -254,6 +254,46 @@ try {
         $roleQuery->execute([$userId]);
         $isAdmin = $roleQuery->fetchColumn() === 'admin';
         respond(['announcements' => fetchAnnouncements($db, $userId, $isAdmin)]);
+    }
+
+    if ($method === 'GET' && $action === 'activity-pdf') {
+        $userId = requireUserId();
+        $activities = fetchActivityLogs($db, $userId, false);
+        if ($activities === []) {
+            respond(['error' => 'Belum ada catatan aktivitas untuk diunduh.'], 404);
+        }
+
+        require dirname(__DIR__) . '/vendor/autoload.php';
+        $items = '';
+        foreach ($activities as $activity) {
+            $date = new DateTimeImmutable($activity['date'], new DateTimeZone('Asia/Jakarta'));
+            $createdAt = new DateTimeImmutable($activity['createdAt'], new DateTimeZone('Asia/Jakarta'));
+            $items .= '<article><h2>' . htmlspecialchars($date->format('d-m-Y'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h2>';
+            $items .= '<p class="saved-at">Disimpan pukul ' . htmlspecialchars($createdAt->format('H:i'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' WIB</p>';
+            $items .= '<p class="activity">' . nl2br(htmlspecialchars($activity['activity'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '</p></article>';
+        }
+
+        $html = '<!doctype html><html lang="id"><head><meta charset="UTF-8"><style>
+            @page { size: A4; margin: 18mm; }
+            body { font-family: "DejaVu Sans", sans-serif; color: #14213d; font-size: 11pt; }
+            h1 { color: #1e3a5f; font-size: 20pt; margin: 0 0 18pt; }
+            article { border-bottom: 1px solid #d5dfeb; padding: 0 0 12pt; margin: 0 0 14pt; page-break-inside: avoid; }
+            h2 { font-size: 12pt; margin: 0; }
+            .saved-at { color: #66758a; font-size: 9pt; margin: 4pt 0 8pt; }
+            .activity { line-height: 1.5; margin: 0; white-space: normal; overflow-wrap: anywhere; }
+          </style></head><body><h1>Catatan Kegiatan</h1>' . $items . '</body></html>';
+
+        $pdf = new \Dompdf\Dompdf();
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper('A4');
+        $pdf->render();
+        $output = $pdf->output();
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="catatan-kegiatan.pdf"');
+        header('Content-Length: ' . strlen($output));
+        echo $output;
+        exit;
     }
 
     if ($method === 'GET' && $action === 'activity-logs') {
@@ -395,8 +435,7 @@ try {
             respond(['error' => 'Tanggal aktivitas tidak boleh melewati hari ini.'], 422);
         }
         $statement = $db->prepare(
-            'INSERT INTO activity_logs (user_id, work_date, activity) VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE activity = VALUES(activity)'
+            'INSERT INTO activity_logs (user_id, work_date, activity) VALUES (?, ?, ?)'
         );
         $statement->execute([$userId, $date, trim($activity)]);
         respond(['activities' => fetchActivityLogs($db, $userId, false)]);

@@ -93,7 +93,7 @@
     .section-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.35px; }
     .section-heading p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
     .history-tools { display: flex; align-items: center; gap: 10px; }
-    .month-select { padding: 8px 28px 8px 10px; border: 1px solid #d5dfeb; border-radius: 8px; background: white; color: #46566e; font-size: 11px; }
+    .month-select, .participant-select { padding: 8px 28px 8px 10px; border: 1px solid #d5dfeb; border-radius: 8px; background: white; color: #46566e; font-size: 11px; }
     .button {
       display: inline-flex;
       min-height: 38px;
@@ -278,6 +278,9 @@
         <div><h2 id="historyTitle">Riwayat semua anggota</h2><p id="historyDescription">Rekap kehadiran bersama semua peserta magang.</p></div>
         <div class="history-tools">
           <select class="month-select" id="monthFilter" aria-label="Filter riwayat berdasarkan bulan"></select>
+          <select class="participant-select" id="participantFilter" aria-label="Pilih peserta untuk melihat riwayat absensi">
+            <option value="all">Semua peserta</option>
+          </select>
           <button class="button" id="refreshButton" type="button" aria-label="Muat ulang riwayat">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4.5 16a8 8 0 0 0 13.6 2M4 17v-5h5m10.5-4a8 8 0 0 0-13.6-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Muat ulang
@@ -422,6 +425,29 @@
         select.value = months.includes(selected) ? selected : "all";
       }
 
+      function updateParticipantOptions() {
+        const select = $("participantFilter");
+        const selected = select.value;
+        const participantsById = new Map();
+        records.forEach((record) => {
+          participantsById.set(String(record.userId), {
+            name: record.name || "Peserta tanpa nama",
+            identity: record.identity || ""
+          });
+        });
+        const participantsWithAttendance = [...participantsById.entries()]
+          .sort((a, b) => a[1].name.localeCompare(b[1].name, "id"));
+
+        select.replaceChildren(new Option("Semua peserta", "all"));
+        participantsWithAttendance.forEach(([userId, participant]) => {
+          const label = participant.identity
+            ? `${participant.name} · ${participant.identity}`
+            : participant.name;
+          select.add(new Option(label, userId));
+        });
+        select.value = participantsById.has(selected) ? selected : "all";
+      }
+
       function formatTime(value) {
         if (!value) return "--:--";
         const mysqlTime = String(value).match(/^\d{4}-\d{2}-\d{2}[ T](\d{2}):(\d{2})/);
@@ -433,22 +459,32 @@
 
       function filteredRecords() {
         const month = $("monthFilter").value;
+        const participantId = $("participantFilter").value;
         return records
-          .filter((record) => month === "all" || record.date.slice(0, 7) === month)
+          .filter((record) => (month === "all" || record.date.slice(0, 7) === month)
+            && (participantId === "all" || String(record.userId) === participantId))
           .sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
       }
 
       function renderHistory() {
         updateFilterOptions();
+        updateParticipantOptions();
         const body = $("historyBody");
         body.replaceChildren();
         const visibleRecords = filteredRecords();
+        const participantId = $("participantFilter").value;
+        const selectedParticipant = participantId === "all"
+          ? null
+          : records.find((record) => String(record.userId) === participantId);
+        $("historyDescription").textContent = selectedParticipant
+          ? `Kehadiran ${selectedParticipant.name}: ${visibleRecords.length} catatan ditampilkan.`
+          : `${visibleRecords.length} dari ${records.length} catatan kehadiran ditampilkan.`;
         if (visibleRecords.length === 0) {
           const row = body.insertRow();
           row.className = "empty-row";
           const cell = row.insertCell();
           cell.colSpan = isAdmin ? 8 : 7;
-          cell.textContent = "Belum ada riwayat absensi untuk periode ini.";
+          cell.textContent = "Belum ada riwayat absensi untuk pilihan ini.";
           return;
         }
         visibleRecords.forEach((record) => {
@@ -488,7 +524,6 @@
             actionCell.append(actions);
           }
         });
-        $("historyDescription").textContent = `${records.length} catatan kehadiran tersimpan bersama.`;
       }
 
       function renderAdminActivities() {
@@ -664,6 +699,7 @@
       }
 
       $("monthFilter").addEventListener("change", renderHistory);
+      $("participantFilter").addEventListener("change", renderHistory);
       $("refreshButton").addEventListener("click", refreshHistory);
       $("exportButton").addEventListener("click", exportCSV);
       $("printReportButton").addEventListener("click", () => window.print());

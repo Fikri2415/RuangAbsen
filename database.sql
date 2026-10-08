@@ -125,7 +125,6 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY activity_log_user_date_unique (user_id, work_date),
   KEY activity_log_work_date_index (work_date),
   CONSTRAINT activity_log_user_fk
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -165,8 +164,32 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY activity_log_user_date_unique (user_id, work_date),
   KEY activity_log_work_date_index (work_date),
   CONSTRAINT activity_log_user_fk
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @activity_log_index_migration = IF(
+  EXISTS(
+    SELECT 1
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+      AND table_name = 'activity_logs'
+      AND index_name = 'activity_log_user_date_unique'
+  ),
+  'ALTER TABLE activity_logs DROP INDEX activity_log_user_date_unique',
+  IF(
+    EXISTS(
+      SELECT 1
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE()
+        AND table_name = 'activity_logs'
+    ),
+    'SELECT 1',
+    'ALTER TABLE activity_logs DROP INDEX activity_log_user_date_unique'
+  )
+);
+
+PREPARE activity_log_index_migration FROM @activity_log_index_migration;
+EXECUTE activity_log_index_migration;
+DEALLOCATE PREPARE activity_log_index_migration;

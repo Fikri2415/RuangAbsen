@@ -204,10 +204,11 @@
     .activity-form input, .activity-form textarea { width: 100%; padding: 10px 11px; border: 1px solid #d5dfeb; border-radius: 8px; outline: 0; color: var(--ink); font: inherit; font-size: 11px; }
     .activity-form textarea { min-height: 85px; resize: vertical; }
     .activity-form input:focus, .activity-form textarea:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
-    .activity-form .button { justify-self: start; }
+    .activity-form .button, .activity-download { justify-self: start; }
+    .activity-download { margin-bottom: 12px; }
     .activity-error { min-height: 14px; color: #b7473c; font-size: 10px; }
     @media print {
-      .sidebar, .topbar-date, .attendance-card, .notification-tools, .activity-form, .toast { display: none !important; }
+      .sidebar, .topbar-date, .attendance-card, .notification-tools, .activity-form, .activity-download, .toast { display: none !important; }
       body { background: white; }
       main { max-width: none; margin: 0; padding: 0; }
       .card, .feature-card { box-shadow: none; }
@@ -552,7 +553,7 @@
         </section>
         <section class="card feature-card activity-card" aria-labelledby="activityTitle">
           <h2 id="activityTitle">Log aktivitas harian</h2>
-          <p>Tulis ringkasan kegiatan magangmu. Catatan dapat diperbarui kembali berdasarkan tanggal.</p>
+          <p>Tulis ringkasan kegiatan magangmu. Setiap catatan yang disimpan akan ditambahkan ke riwayat, termasuk beberapa catatan pada tanggal yang sama.</p>
           <form class="activity-form" id="activityForm">
             <label for="activityDate">Tanggal kegiatan</label>
             <input id="activityDate" name="date" type="date" required>
@@ -561,6 +562,7 @@
             <div class="activity-error" id="activityError" role="alert"></div>
             <button class="button button-primary" id="saveActivityButton" type="submit">Simpan catatan</button>
           </form>
+          <button class="button activity-download" id="downloadActivitiesButton" type="button">Unduh catatan (PDF)</button>
           <div class="activity-list" id="activityList" aria-live="polite">
             <div class="feature-empty">Belum ada catatan aktivitas.</div>
           </div>
@@ -1054,11 +1056,6 @@
       function renderActivities() {
         const list = $("activityList");
         list.replaceChildren();
-        const selectedDate = $("activityDate").value;
-        const selectedActivity = activities.find((item) => item.date === selectedDate);
-        if (document.activeElement !== $("activityText")) {
-          $("activityText").value = selectedActivity?.activity || "";
-        }
         if (!activities.length) {
           const empty = document.createElement("div");
           empty.className = "feature-empty";
@@ -1072,12 +1069,57 @@
           const title = document.createElement("h3");
           const [year, month, day] = activity.date.split("-").map(Number);
           title.textContent = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, day)));
+          const meta = document.createElement("div");
+          meta.className = "activity-meta";
+          meta.textContent = `Disimpan pukul ${new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(activity.createdAt.replace(" ", "T") + "+07:00"))} WIB`;
           const body = document.createElement("p");
           body.className = "activity-body";
           body.textContent = activity.activity;
-          item.append(title, body);
+          item.append(title, meta, body);
           list.append(item);
         });
+      }
+
+      async function downloadActivities() {
+        if (!activities.length) {
+          showToast("Belum ada catatan aktivitas untuk disimpan sebagai PDF.");
+          return;
+        }
+        const button = $("downloadActivitiesButton");
+        button.disabled = true;
+        try {
+          const response = await fetch(`${API_URL}?action=activity-pdf`, {
+            headers: { Accept: "application/pdf" },
+            credentials: "same-origin"
+          });
+          if (!response.ok) {
+            let result;
+            try {
+              result = await response.json();
+            } catch {
+              throw new Error(`Unduhan gagal (${response.status}).`);
+            }
+            throw new Error(result.error || `Unduhan gagal (${response.status}).`);
+          }
+          const pdf = await response.blob();
+          if (pdf.type !== "application/pdf") {
+            throw new Error("Server tidak mengirim file PDF yang valid.");
+          }
+          const url = URL.createObjectURL(pdf);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "catatan-kegiatan.pdf";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast("Catatan kegiatan berhasil diunduh sebagai PDF.");
+        } catch (error) {
+          console.error("Tidak dapat mengunduh catatan aktivitas.", error);
+          showToast(`Gagal mengunduh PDF: ${error.message}`);
+        } finally {
+          button.disabled = false;
+        }
       }
 
       async function loadUserFeatures() {
@@ -1104,6 +1146,7 @@
         renderCalendar();
       });
       $("activityDate").addEventListener("change", renderActivities);
+      $("downloadActivitiesButton").addEventListener("click", downloadActivities);
       $("activityForm").addEventListener("submit", async (event) => {
         event.preventDefault();
         $("activityError").textContent = "";
