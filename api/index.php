@@ -12,6 +12,7 @@ header('Referrer-Policy: same-origin');
 $isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off';
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
+ini_set('session.gc_maxlifetime', '1800');
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
@@ -21,11 +22,37 @@ session_set_cookie_params([
 ]);
 session_start();
 
+const SESSION_IDLE_TIMEOUT = 1800;
+
 function respond(array $body, int $status = 200): never
 {
     http_response_code($status);
     echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+function expireIdleSession(bool $sessionCheck = false): void
+{
+    if (!isset($_SESSION['user_id'])) {
+        return;
+    }
+
+    $lastActivity = $_SESSION['last_activity_at'] ?? null;
+    if (!is_int($lastActivity)) {
+        $_SESSION['last_activity_at'] = time();
+        return;
+    }
+    if (time() - $lastActivity < SESSION_IDLE_TIMEOUT) {
+        return;
+    }
+
+    $_SESSION = [];
+    session_regenerate_id(true);
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    if ($sessionCheck) {
+        respond(['csrf' => $_SESSION['csrf_token'], 'user' => null, 'profile' => null, 'records' => [], 'divisions' => []]);
+    }
+    respond(['error' => 'Sesi berakhir setelah 30 menit tidak aktif. Silakan masuk kembali.'], 401);
 }
 
 function requireCsrf(): void
@@ -162,6 +189,22 @@ function fetchActivityLogs(PDO $db, int $userId, bool $isAdmin): array
     ], $statement->fetchAll());
 }
 
+function fetchAdminUsers(PDO $db): array
+{
+    $users = $db->query(
+        "SELECT id, email, name, identity_number AS identityNumber, school, password_hash
+         FROM users WHERE role = 'participant' ORDER BY name ASC, email ASC"
+    )->fetchAll();
+    return array_map(static fn (array $user): array => [
+        'id' => (int) $user['id'],
+        'email' => $user['email'],
+        'name' => $user['name'],
+        'identity' => $user['identityNumber'],
+        'school' => $user['school'],
+        'hasPassword' => $user['password_hash'] !== null,
+    ], $users);
+}
+
 function profileFromRow(array $row): array
 {
     return [
@@ -192,6 +235,8 @@ try {
 
     $action = $_GET['action'] ?? '';
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+    expireIdleSession($method === 'GET' && $action === 'session');
 
     if ($method === 'GET' && $action === 'session') {
         if (!isset($_SESSION['csrf_token'])) {
@@ -246,6 +291,12 @@ try {
             'email' => $participant['email'],
             'identity' => $participant['identity_number'],
         ], $participants)]);
+    }
+
+    if ($method === 'GET' && $action === 'admin-users') {
+        $userId = requireUserId();
+        requireAdmin($db, $userId);
+        respond(['users' => fetchAdminUsers($db)]);
     }
 
     if ($method === 'GET' && $action === 'announcements') {
@@ -312,6 +363,12 @@ try {
     requireCsrf();
     $data = readJsonBody();
 
+    if ($action === 'session-activity') {
+        $userId = requireUserId();
+        $_SESSION['last_activity_at'] = time();
+        respond(['active' => true, 'userId' => $userId]);
+    }
+
     if ($action === 'login') {
         $email = strtolower(trim((string) ($data['email'] ?? '')));
         $password = (string) ($data['password'] ?? '');
@@ -332,8 +389,17 @@ try {
             usleep(350000);
             respond(['error' => 'Email atau kata sandi salah. Jika belum memiliki akun, hubungi pengelola.'], 401);
         }
+
         session_regenerate_id(true);
+        unset(
+            $_SESSION['pending_login_user_id'],
+            $_SESSION['login_otp_hash'],
+            $_SESSION['login_otp_expires_at'],
+            $_SESSION['login_otp_attempts'],
+            $_SESSION['login_otp_sent_at']
+        );
         $_SESSION['user_id'] = (int) $user['id'];
+        $_SESSION['last_activity_at'] = time();
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         respond([
             'csrf' => $_SESSION['csrf_token'],
@@ -352,6 +418,71 @@ try {
     }
 
     $userId = requireUserId();
+
+    if ($action === 'admin-user') {
+        requireAdmin($db, $userId);
+        $operation = $data['operation'] ?? null;
+        if (!is_string($operation) || !in_array($operation, ['create', 'reset-password'], true)) {
+            respond(['error' => 'Operasi pengelolaan akun tidak valid.'], 422);
+        }
+        $password = $data['password'] ?? null;
+        if (!is_string($password) || strlen($password) < 12 || strlen($password) > 1024) {
+            respond(['error' => 'Kata sandi wajib minimal 12 karakter.'], 422);
+        }
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+        if ($operation === 'create') {
+            $email = $data['email'] ?? null;
+            $name = $data['name'] ?? null;
+            $identity = $data['identity'] ?? '';
+            $school = $data['school'] ?? '';
+            if (!is_string($email) || !is_string($name) || !is_string($identity) || !is_string($school)) {
+                respond(['error' => 'Format email, nama, NIM/NIS, atau instansi tidak valid.'], 422);
+            }
+            $email = strtolower(trim($email));
+            $name = trim($name);
+            $identity = trim($identity);
+            $school = trim($school);
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254
+                || $name === '' || mb_strlen($name) > 80
+                || mb_strlen($identity) > 40 || mb_strlen($school) > 100) {
+                respond(['error' => 'Periksa email, nama (maksimal 80 karakter), NIM/NIS, dan instansi.'], 422);
+            }
+            try {
+                $statement = $db->prepare(
+                    "INSERT INTO users (email, password_hash, role, name, identity_number, school)
+                     VALUES (?, ?, 'participant', ?, ?, ?)"
+                );
+                $statement->execute([$email, $passwordHash, $name, $identity, $school]);
+            } catch (PDOException $error) {
+                if ((string) $error->getCode() === '23000') {
+                    respond(['error' => 'Email tersebut sudah digunakan oleh akun lain.'], 409);
+                }
+                throw $error;
+            }
+            respond(['users' => fetchAdminUsers($db), 'message' => 'Akun peserta berhasil dibuat.']);
+        }
+
+        if ($operation === 'reset-password') {
+            $participantId = filter_var($data['userId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($participantId === false) {
+                respond(['error' => 'Pilih akun peserta yang valid.'], 422);
+            }
+            $statement = $db->prepare(
+                "UPDATE users SET password_hash = ? WHERE id = ? AND role = 'participant'"
+            );
+            $statement->execute([$passwordHash, $participantId]);
+            if ($statement->rowCount() === 0) {
+                $exists = $db->prepare("SELECT 1 FROM users WHERE id = ? AND role = 'participant'");
+                $exists->execute([$participantId]);
+                if (!$exists->fetchColumn()) {
+                    respond(['error' => 'Akun peserta tidak ditemukan. Muat ulang daftar akun.'], 404);
+                }
+            }
+            respond(['users' => fetchAdminUsers($db), 'message' => 'Kata sandi peserta berhasil diatur ulang.']);
+        }
+
+    }
 
     if ($action === 'announcement') {
         requireAdmin($db, $userId);

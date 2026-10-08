@@ -133,6 +133,10 @@
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5.5h16M4 10h16M4 14.5h10M4 19h10M18 15v6m-3-3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       Riwayat absensi
     </a>
+    <a class="nav-link" id="adminUsersLink" href="pengelola.html" hidden>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 11a3 3 0 1 0 0-6M17 14a5 5 0 0 1 3.5 4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      Kelola akun peserta
+    </a>
     <button class="nav-link" id="signOutButton" type="button" hidden>
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Keluar
@@ -191,6 +195,8 @@
     </div>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="api/page-transition.js"></script>
+  <script src="api/session-timeout.js"></script>
   <script>
     (() => {
       "use strict";
@@ -225,7 +231,12 @@
         } catch {
           throw new Error("Respons server tidak valid. Periksa konfigurasi PHP.");
         }
-        if (result.csrf) csrfToken = result.csrf;
+        if (result.csrf) {
+          csrfToken = result.csrf;
+          if (action === "session" && result.user && window.RuangAbsenSession) {
+            window.RuangAbsenSession.start(csrfToken);
+          }
+        }
         if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
         return result;
       }
@@ -277,7 +288,7 @@
         button.disabled = true;
         try {
           await apiRequest("logout", { method: "POST", data: {} });
-          window.location.replace("login.html");
+          await window.RuangAbsenTransition.navigate("login.html");
         } catch (error) {
           console.error("Tidak dapat keluar dari akun peserta.", error);
           showToast(`Gagal keluar: ${error.message}`);
@@ -312,6 +323,7 @@
         csrfToken = session.csrf || "";
         currentUser = session.user;
         $("signOutButton").hidden = false;
+        $("adminUsersLink").hidden = currentUser.role !== "admin";
         profile = session.profile || {};
         divisions = session.divisions || [];
         render();

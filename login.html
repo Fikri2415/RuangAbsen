@@ -22,19 +22,45 @@
       place-items: center;
       margin: 0;
       padding: 24px;
-      background:
-        radial-gradient(ellipse at 14% 8%, rgba(214, 227, 242, .76), transparent 36%),
-        radial-gradient(ellipse at 94% 94%, rgba(220, 232, 242, .8), transparent 38%),
-        #f2f5f9;
+      background-color: #f2f5f9;
+      background-image: linear-gradient(rgba(242, 245, 249, .18), rgba(242, 245, 249, .18)), url("image/login-background.png");
+      background-position: center bottom;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
     }
-    .login-layout { display: grid; width: min(920px, 100%); grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 24px; background: white; box-shadow: 0 24px 70px rgba(20, 42, 69, .12); }
-    .institution-panel { display: flex; min-height: 570px; flex-direction: column; justify-content: space-between; padding: 44px; background: linear-gradient(145deg, #142a45, #1d4167); color: white; }
+    .screen-motion { position: fixed; z-index: 2; inset: 0; overflow: hidden; pointer-events: none; }
+    .screen-particle { position: absolute; left: -6vw; width: 13px; height: 13px; border: 1px solid rgba(57, 99, 146, .44); border-radius: 50%; background: rgba(255, 255, 255, .9); box-shadow: 0 0 22px 3px rgba(91, 132, 177, .34); animation: screen-cross 15s linear infinite; }
+    .screen-particle::after { position: absolute; inset: 3px; border-radius: inherit; background: rgba(62, 112, 165, .72); content: ""; }
+    .screen-particle-one { top: 14%; animation-delay: -4s; animation-duration: 14s; }
+    .screen-particle-two { top: 36%; width: 9px; height: 9px; animation-delay: -9s; animation-duration: 18s; }
+    .screen-particle-three { top: 64%; width: 15px; height: 15px; animation-delay: -7s; animation-duration: 15s; }
+    .screen-particle-four { top: 84%; width: 8px; height: 8px; animation-delay: -12s; animation-duration: 19s; }
+    .screen-particle-five { top: 51%; width: 11px; height: 11px; animation-delay: -13s; animation-duration: 17s; }
+    @keyframes screen-cross {
+      0% { opacity: 0; transform: translate3d(-5vw, 8vh, 0) scale(.65); }
+      8% { opacity: .72; }
+      48% { opacity: .5; }
+      92% { opacity: .72; }
+      100% { opacity: 0; transform: translate3d(120vw, -12vh, 0) scale(1.2); }
+    }
+    .login-layout { position: relative; z-index: 1; display: grid; width: min(920px, 100%); grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 24px; background: white; box-shadow: 0 24px 70px rgba(20, 42, 69, .12); }
+    .institution-panel { position: relative; isolation: isolate; display: flex; min-height: 570px; flex-direction: column; justify-content: space-between; overflow: hidden; padding: 44px; background: linear-gradient(145deg, #142a45, #1d4167); color: white; }
+    .institution-panel::before, .institution-panel::after { position: absolute; z-index: -1; border: 1px solid rgba(210, 229, 250, .13); border-radius: 50%; content: ""; pointer-events: none; }
+    .institution-panel::before { top: 18%; right: -112px; width: 310px; height: 310px; box-shadow: 0 0 0 26px rgba(210, 229, 250, .035), 0 0 0 54px rgba(210, 229, 250, .025); animation: orbit-drift 12s ease-in-out infinite alternate; }
+    .institution-panel::after { top: 27%; right: -42px; width: 168px; height: 168px; border-color: rgba(145, 179, 215, .25); animation: orbit-spin 24s linear infinite; }
+    .ambient-dot { position: absolute; z-index: -1; width: 7px; height: 7px; border-radius: 50%; background: #c3d6eb; box-shadow: 0 0 17px 4px rgba(195, 214, 235, .35); pointer-events: none; }
+    .ambient-dot-one { top: 24%; right: 20%; animation: dot-float 4.2s ease-in-out infinite; }
+    .ambient-dot-two { top: 42%; right: 12%; width: 5px; height: 5px; animation: dot-float 5.1s 1s ease-in-out infinite reverse; }
+    .ambient-dot-three { top: 36%; right: 34%; width: 4px; height: 4px; animation: dot-float 4.7s .5s ease-in-out infinite; }
+    .institution-panel > :not(.ambient-dot) { position: relative; z-index: 1; }
     .institution-brand { display: flex; align-items: center; gap: 14px; }
-    .institution-brand img { width: 66px; height: 66px; flex: 0 0 auto; object-fit: contain; border-radius: 15px; background: white; }
+    .institution-brand img { width: 66px; height: 66px; flex: 0 0 auto; object-fit: contain; border: 1px solid rgba(255, 255, 255, .72); border-radius: 17px; background: white; box-shadow: 0 9px 26px rgba(5, 19, 37, .22); animation: logo-float 3.8s ease-in-out infinite; transition: transform .25s, box-shadow .25s; }
+    .institution-brand img:hover { transform: translateY(-4px) rotate(-3deg) scale(1.04); box-shadow: 0 15px 30px rgba(5, 19, 37, .28); }
     .institution-brand strong { display: block; font-size: 15px; letter-spacing: .1px; }
     .institution-brand span { display: block; margin-top: 5px; color: #cfdaea; font-size: 11px; }
     .institution-copy { position: relative; padding: 45px 0; }
-    .institution-copy::before { position: absolute; top: 0; left: 0; width: 46px; height: 3px; border-radius: 4px; background: #91b3d7; content: ""; }
+    .institution-copy::before { position: absolute; top: 0; left: 0; width: 46px; height: 3px; border-radius: 4px; background: #91b3d7; content: ""; box-shadow: 0 0 14px rgba(145, 179, 215, .7); animation: accent-glow 2.8s ease-in-out infinite alternate; }
     .eyebrow { margin: 0 0 13px; color: #c3d6eb; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
     h1 { max-width: 340px; margin: 0; font-size: clamp(29px, 4vw, 39px); letter-spacing: -1.3px; line-height: 1.15; }
     .institution-copy p:last-child { max-width: 320px; margin: 16px 0 0; color: #d9e4f1; font-size: 13px; line-height: 1.7; }
@@ -44,15 +70,42 @@
     .form-description { margin: 9px 0 30px; color: #718096; font-size: 12px; line-height: 1.6; }
     .field { display: grid; gap: 8px; margin-bottom: 18px; }
     label { color: #46566e; font-size: 11px; font-weight: 700; }
-    input { width: 100%; min-height: 46px; padding: 0 13px; border: 1px solid #d5dfeb; border-radius: 9px; outline: 0; color: #172b45; font: inherit; font-size: 12px; transition: border-color .15s, box-shadow .15s; }
-    input:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    input { width: 100%; min-height: 46px; padding: 0 13px; border: 1px solid #d5dfeb; border-radius: 9px; outline: 0; color: #172b45; font: inherit; font-size: 12px; transition: border-color .2s, box-shadow .2s, transform .2s; }
+    input:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; animation: input-focus .32s ease-out; }
+    @keyframes input-focus { 50% { transform: scale(1.012); } }
     .form-error { min-height: 18px; margin: 0 0 12px; color: #b7473c; font-size: 11px; line-height: 1.5; }
-    .submit-button { width: 100%; min-height: 46px; border: 0; border-radius: 9px; background: #1d4167; color: white; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s, transform .15s; }
+    .login-reaction { display: flex; align-items: center; gap: 10px; margin: -3px 0 12px; padding: 9px 11px; border: 1px solid #f1d9b2; border-radius: 10px; background: #fff8eb; color: #79552a; font-size: 11px; font-weight: 650; transform-origin: 50% 50%; }
+    .login-reaction[hidden] { display: none; }
+    .login-reaction.is-shown { animation: reaction-pop .38s cubic-bezier(.2, .8, .2, 1) both, reaction-shake .42s .35s ease-in-out 2; }
+    .monkey-face { width: 48px; height: 48px; flex: 0 0 48px; transform-origin: 50% 80%; }
+    .monkey-tongue { transform-origin: 50% 10%; }
+    .login-reaction.is-shown .monkey-face { animation: monkey-tease 1.15s cubic-bezier(.2, .8, .2, 1) both; }
+    .login-reaction.is-shown .monkey-tongue { animation: tongue-tease .55s .22s ease-in-out 3 alternate; }
+    @keyframes reaction-pop { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes reaction-shake { 25% { transform: translateX(-4px) rotate(-.5deg); } 75% { transform: translateX(4px) rotate(.5deg); } }
+    @keyframes monkey-tease { 0% { opacity: 0; transform: rotate(-22deg) scale(.45); } 38% { opacity: 1; transform: rotate(15deg) scale(1.18); } 58% { transform: rotate(-12deg) scale(.94); } 78% { transform: rotate(8deg) scale(1.05); } 100% { transform: rotate(0) scale(1); } }
+    @keyframes tongue-tease { to { transform: rotate(17deg) translateY(4px) scaleY(1.15); } }
+    @keyframes logo-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-5px) rotate(1.5deg); } }
+    @keyframes orbit-drift { to { transform: translate(-20px, 18px) scale(1.08); } }
+    @keyframes orbit-spin { to { transform: rotate(360deg) scale(1.06); } }
+    @keyframes dot-float { 0%, 100% { opacity: .4; transform: translateY(0) scale(.8); } 50% { opacity: 1; transform: translateY(-14px) scale(1.25); } }
+    @keyframes accent-glow { to { width: 76px; box-shadow: 0 0 22px rgba(145, 179, 215, .95); } }
+    .submit-button { position: relative; width: 100%; min-height: 46px; border: 0; border-radius: 9px; background: #1d4167; color: white; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s, transform .15s, box-shadow .2s; }
     .submit-button:hover:not(:disabled) { background: #142a45; }
-    .submit-button:active:not(:disabled) { transform: translateY(1px); }
-    .submit-button:disabled { cursor: wait; opacity: .65; }
+    .submit-button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+    .submit-button.is-submitting { overflow: hidden; box-shadow: 0 0 0 4px rgba(91, 132, 177, .18); animation: submit-pulse .8s ease-in-out infinite alternate; }
+    .submit-button.is-submitting::after { position: absolute; top: -50%; left: -45%; width: 28%; height: 200%; transform: rotate(22deg); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38), transparent); content: ""; animation: button-shine 1.15s ease-in-out infinite; }
+    @keyframes submit-pulse { to { box-shadow: 0 0 0 7px rgba(91, 132, 177, .08); } }
+    @keyframes button-shine { to { left: 125%; } }
+    .submit-button:disabled { cursor: wait; opacity: .82; }
     .support-note { margin: 21px 0 0; color: #718096; font-size: 11px; line-height: 1.6; text-align: center; }
     .support-note strong { color: #46566e; }
+    .contact-links { display: flex; justify-content: center; gap: 12px; margin-top: 11px; }
+    .contact-link { display: inline-flex; min-height: 38px; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid #e0e7f0; border-radius: 999px; background: #fff; color: #46566e; font-size: 11px; font-weight: 650; text-decoration: none; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+    .contact-link:hover, .contact-link:focus-visible { transform: translateY(-2px); border-color: #b8cbe0; box-shadow: 0 6px 16px rgba(20, 42, 69, .1); outline: none; }
+    .contact-link svg { width: 18px; height: 18px; flex: 0 0 18px; }
+    .contact-link-whatsapp svg { color: #168b56; }
+    .contact-link-email svg { color: #c14e45; }
     @keyframes page-enter { from { opacity: 0; transform: translateY(24px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
     .institution-panel { animation: page-enter .78s cubic-bezier(.16, 1, .3, 1) both; }
     .form-panel { animation: page-enter .78s cubic-bezier(.16, 1, .3, 1) both; animation-delay: 110ms; }
@@ -72,13 +125,27 @@
       .form-description { margin-bottom: 23px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .institution-panel, .form-panel { animation: none !important; }
+      .screen-particle { animation-duration: 16s !important; }
+      .institution-panel, .form-panel, .institution-panel::before, .institution-panel::after,
+      .ambient-dot, .institution-brand img, .institution-copy::before, .login-reaction.is-shown,
+      .login-reaction.is-shown .monkey-face, .login-reaction.is-shown .monkey-tongue,
+      input:focus, .submit-button.is-submitting, .submit-button.is-submitting::after { animation: none !important; }
     }
   </style>
 </head>
 <body>
+  <div class="screen-motion" aria-hidden="true">
+    <span class="screen-particle screen-particle-one"></span>
+    <span class="screen-particle screen-particle-two"></span>
+    <span class="screen-particle screen-particle-three"></span>
+    <span class="screen-particle screen-particle-four"></span>
+    <span class="screen-particle screen-particle-five"></span>
+  </div>
   <main class="login-layout">
     <section class="institution-panel" aria-label="Informasi instansi">
+      <span class="ambient-dot ambient-dot-one" aria-hidden="true"></span>
+      <span class="ambient-dot ambient-dot-two" aria-hidden="true"></span>
+      <span class="ambient-dot ambient-dot-three" aria-hidden="true"></span>
       <div class="institution-brand">
         <img src="image/logo-kesbang.png" alt="Logo Badan Kesatuan Bangsa dan Politik Kota Bandung">
         <div><strong>Kesbangpol Kota Bandung</strong><span>Portal absensi peserta magang</span></div>
@@ -102,24 +169,53 @@
           <label for="passwordInput">Kata sandi</label>
           <input id="passwordInput" name="password" type="password" autocomplete="current-password" required placeholder="Masukkan kata sandi">
         </div>
+        <div class="login-reaction" id="loginReaction" role="status" hidden>
+          <svg class="monkey-face" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="11" cy="30" r="10" fill="#9b6138"/>
+            <circle cx="53" cy="30" r="10" fill="#9b6138"/>
+            <circle cx="11" cy="30" r="5" fill="#d99a63"/>
+            <circle cx="53" cy="30" r="5" fill="#d99a63"/>
+            <ellipse cx="32" cy="32" rx="23" ry="25" fill="#b97847"/>
+            <path d="M16 30c0-8 7-14 16-14s16 6 16 14v10c0 10-7 17-16 17s-16-7-16-17V30Z" fill="#f1c894"/>
+            <ellipse cx="24" cy="29" rx="2.4" ry="3" fill="#33251d"/>
+            <ellipse cx="40" cy="29" rx="2.4" ry="3" fill="#33251d"/>
+            <ellipse cx="32" cy="38" rx="7" ry="4.5" fill="#8b5534"/>
+            <path d="M25 42c2 5 12 5 14 0" fill="none" stroke="#563421" stroke-width="2" stroke-linecap="round"/>
+            <path class="monkey-tongue" d="M29 44h6v8c0 3-6 3-6 0v-8Z" fill="#e66b78"/>
+          </svg>
+          <span>Email atau kata sandinya salah. Coba lagi, ya!</span>
+        </div>
         <div class="form-error" id="loginError" role="alert" aria-live="polite"></div>
         <button class="submit-button" id="submitButton" type="submit">Masuk</button>
       </form>
-      <p class="support-note">Belum memiliki akun atau lupa kata sandi?<br><strong>Hubungi pengelola magang.</strong></p>
+      <div class="support-note">
+        <div>Belum memiliki akun atau lupa kata sandi?<br><strong>Hubungi pengelola magang.</strong></div>
+        <div class="contact-links" aria-label="Kontak pengelola">
+          <a class="contact-link contact-link-whatsapp" href="https://wa.me/6281807777387" target="_blank" rel="noopener noreferrer" aria-label="Hubungi pengelola melalui WhatsApp">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.4 11.7a8.4 8.4 0 0 1-12.4 7.4L4 20l.9-3.8a8.4 8.4 0 1 1 15.5-4.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 8.2c.2-.4.4-.4.7-.4h.5c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4-.1.6l-.6.7c-.2.2-.2.4 0 .7.6 1 1.5 1.8 2.5 2.3.2.1.4.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.6.8c.3.1.4.3.3.6-.1.6-.4 1.1-.9 1.4-.5.3-1.1.4-1.8.2-1.2-.3-2.5-1-3.8-2.2-1.1-1-2-2.3-2.3-3.4-.3-.9-.1-1.6.3-2.2Z" fill="currentColor"/></svg>
+            WhatsApp
+          </a>
+          <a class="contact-link contact-link-email" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=adminkesbangpol%40gmail.com" target="_blank" rel="noopener noreferrer" aria-label="Kirim email ke pengelola melalui Gmail">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m4.5 7 7.5 6 7.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Gmail
+          </a>
+        </div>
+      </div>
     </section>
   </main>
+  <script src="api/page-transition.js"></script>
   <script>
     (() => {
       "use strict";
 
       const API_URL = "api/index.php";
       const $ = (id) => document.getElementById(id);
-      const allowedDestinations = new Set(["index.html", "profil.html", "riwayat.html", "divisi.html"]);
+      const allowedDestinations = new Set(["index.html", "profil.html", "riwayat.html", "divisi.html", "pengelola.html"]);
       let csrfToken = "";
 
       function destination() {
         const requested = new URLSearchParams(window.location.search).get("next") || "index.html";
-        const match = /^(index|profil|riwayat|divisi)\.html(?:#[a-z-]+)?$/.exec(requested);
+        const match = /^(index|profil|riwayat|divisi|pengelola)\.html(?:#[a-z-]+)?$/.exec(requested);
         return match && allowedDestinations.has(match[1] + ".html") ? requested : "index.html";
       }
 
@@ -140,20 +236,26 @@
           throw new Error("Server mengirim respons yang tidak valid. Pastikan hosting mendukung PHP.");
         }
         if (result.csrf) csrfToken = result.csrf;
-        if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+        if (!response.ok) {
+          const error = new Error(result.error || `Permintaan gagal (${response.status}).`);
+          error.status = response.status;
+          throw error;
+        }
         return result;
       }
 
       async function checkSession() {
         const session = await apiRequest("session");
-        if (session.user) window.location.replace(session.user.role === "admin" ? "divisi.html" : destination());
+        if (session.user) await window.RuangAbsenTransition.navigate(session.user.role === "admin" ? "divisi.html" : destination());
       }
 
       $("loginForm").addEventListener("submit", async (event) => {
         event.preventDefault();
         const button = $("submitButton");
         const errorBox = $("loginError");
+        $("loginReaction").hidden = true;
         button.disabled = true;
+        button.classList.add("is-submitting");
         button.textContent = "Memeriksa...";
         errorBox.textContent = "";
         try {
@@ -165,15 +267,32 @@
               password: $("passwordInput").value
             }
           });
-          $("passwordInput").value = "";
-          window.location.replace(result.user?.role === "admin" ? "divisi.html" : destination());
+          const target = destination();
+          await window.RuangAbsenTransition.navigate(result.user?.role === "admin" && target === "index.html" ? "divisi.html" : target);
         } catch (error) {
           console.error("Login gagal.", error);
-          errorBox.textContent = error.message;
+          if (error.status === 401) {
+            const reaction = $("loginReaction");
+            reaction.hidden = false;
+            reaction.classList.remove("is-shown");
+            void reaction.offsetWidth;
+            reaction.classList.add("is-shown");
+            errorBox.textContent = "";
+          } else {
+            errorBox.textContent = error.message;
+          }
         } finally {
           button.disabled = false;
+          button.classList.remove("is-submitting");
           button.textContent = "Masuk";
         }
+      });
+
+      ["emailInput", "passwordInput"].forEach((id) => {
+        $(id).addEventListener("focus", () => {
+          $("loginReaction").hidden = true;
+          $("loginError").textContent = "";
+        });
       });
 
       checkSession().catch((error) => {

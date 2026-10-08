@@ -29,9 +29,10 @@
     .brand-name { font-size: 16px; font-weight: 750; letter-spacing: -.5px; }
     .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
     .nav-label { margin: 12px 10px 8px; color: #8997aa; font-size: 10px; font-weight: 750; letter-spacing: 1.25px; text-transform: uppercase; }
-    .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; color: #5d6d82; font-size: 13px; font-weight: 600; text-decoration: none; }
+    .nav-link { display: flex; min-height: 42px; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #5d6d82; font-size: 13px; font-weight: 600; text-decoration: none; }
     .nav-link:hover, .nav-link.active { background: var(--pale); color: var(--navy-dark); }
-    .nav-link svg { width: 18px; height: 18px; }
+    .nav-icon { display: grid; width: 18px; height: 18px; flex: 0 0 18px; place-items: center; }
+    .nav-icon svg { display: block; width: 18px; height: 18px; }
     .mobile-nav-toggle { display: none; }
     .sidebar button.nav-link { width: 100%; border: 0; background: transparent; text-align: left; }
     .sidebar button.nav-link:hover { background: var(--pale); }
@@ -39,6 +40,7 @@
     .sidebar-footer { margin-top: auto; padding: 18px 9px 0; color: #8997aa; font-size: 10px; }
     main { max-width: 1180px; margin-left: 244px; padding: 35px 48px 48px; }
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; }
+    .topbar-actions { display: flex; align-items: center; gap: 14px; }
     .eyebrow { margin: 0 0 6px; color: var(--navy); font-size: 11px; font-weight: 750; letter-spacing: 1.35px; text-transform: uppercase; }
     h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); letter-spacing: -1.3px; }
     .topbar-date { color: var(--muted); font-size: 12px; }
@@ -55,6 +57,7 @@
     .button-primary { border-color: var(--navy); background: var(--navy); color: white; }
     .button-primary:hover:not(:disabled) { background: var(--navy-dark); }
     .button:hover:not(:disabled) { background: #f2f6fb; }
+    .button svg { width: 16px; height: 16px; flex: 0 0 16px; }
     .button-primary:hover:not(:disabled) { background: var(--navy-dark); }
     .button:disabled { cursor: wait; opacity: .55; }
     .form-error { min-height: 16px; margin-top: 10px; color: #b7473c; font-size: 11px; }
@@ -102,10 +105,12 @@
       .sidebar.is-collapsed { row-gap: 0; }
       .sidebar.is-collapsed > .nav-link:not([hidden]) { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, 0s, 0s, .28s; }
       .sidebar:not(.is-collapsed) .mobile-nav-toggle svg { transform: rotate(90deg); }
-      .nav-link { justify-content: center; gap: 6px; padding: 9px 5px; font-size: 11px; }
-      .nav-link svg { width: 16px; height: 16px; }
+      .nav-link { justify-content: flex-start; gap: 12px; padding: 10px 12px; font-size: 11px; }
+      .nav-icon { width: 18px; height: 18px; flex-basis: 18px; }
+      .nav-icon svg { width: 18px; height: 18px; }
       main { margin: 0; padding: 25px 16px 32px; }
       .topbar { align-items: flex-start; margin-bottom: 21px; }
+      .topbar-actions { align-items: flex-end; flex-direction: column; gap: 8px; }
       .topbar-date { max-width: 115px; text-align: right; line-height: 1.5; }
       .panel, .list-panel { padding: 19px 16px 10px; }
       .announcement-panel { padding: 19px 16px 15px; }
@@ -132,10 +137,20 @@
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </button>
     <div class="nav-label">Administrator</div>
-    <a class="nav-link" href="riwayat.html">Kelola riwayat absensi</a>
-    <a class="nav-link active" href="divisi.html" aria-current="page">Admin · Kelola divisi</a>
+    <a class="nav-link" href="riwayat.html">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5h16M4 10h16M4 14.5h10M4 19h10M18 15v6m-3-3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+      Kelola riwayat absensi
+    </a>
+    <a class="nav-link active" href="divisi.html" aria-current="page">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Kelola divisi
+    </a>
+    <a class="nav-link" href="pengelola.html">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 11a3 3 0 1 0 0-6M17 14a5 5 0 0 1 3.5 4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+      Kelola akun peserta
+    </a>
     <button class="nav-link" id="signOutButton" type="button">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       Keluar
     </button>
     <div class="sidebar-footer">Ruang Absen · Magang</div>
@@ -143,7 +158,13 @@
   <main>
     <header class="topbar">
       <div><p class="eyebrow">Panel administrator</p><h1>Kelola divisi</h1></div>
-      <div class="topbar-date" id="headerDate"></div>
+      <div class="topbar-actions">
+        <a class="button button-primary" href="pengelola.html">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 11a3 3 0 1 0 0-6M17 14a5 5 0 0 1 3.5 4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          Kelola akun peserta
+        </a>
+        <div class="topbar-date" id="headerDate"></div>
+      </div>
     </header>
     <section class="card panel" aria-labelledby="formTitle">
       <h2 id="formTitle">Tambah divisi</h2>
@@ -182,6 +203,8 @@
     </section>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="api/page-transition.js"></script>
+  <script src="api/session-timeout.js"></script>
   <script>
     (() => {
       "use strict";
@@ -217,7 +240,12 @@
         } catch {
           throw new Error("Respons server tidak valid. Periksa konfigurasi PHP.");
         }
-        if (result.csrf) csrfToken = result.csrf;
+        if (result.csrf) {
+          csrfToken = result.csrf;
+          if (action === "session" && result.user && window.RuangAbsenSession) {
+            window.RuangAbsenSession.start(csrfToken);
+          }
+        }
         if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
         return result;
       }
@@ -460,7 +488,7 @@
         $("signOutButton").disabled = true;
         try {
           await apiRequest("logout", { method: "POST", data: {} });
-          window.location.replace("login.html");
+          await window.RuangAbsenTransition.navigate("login.html");
         } catch (error) {
           console.error("Tidak dapat keluar dari akun administrator.", error);
           showToast(`Gagal keluar: ${error.message}`);

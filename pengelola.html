@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142a45">
+  <title>Kelola akun — Ruang Absen</title>
+  <style>
+    :root { color-scheme: light; --ink: #14213d; --muted: #66758a; --navy: #1e3a5f; --navy-dark: #142a45; --pale: #e8f0fa; --paper: #fff; --canvas: #f4f7fb; --line: #e0e7f0; --shadow: 0 18px 55px rgba(20, 42, 69, .08); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 2; display: flex; width: 244px; flex-direction: column; gap: 4px; padding: 30px 20px 22px; border-right: 1px solid var(--line); background: #fbfcfe; }
+    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 26px; padding: 0 9px; }
+    .brand-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 13px; background: var(--navy); color: white; font-weight: 800; }
+    .brand-name { font-size: 16px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .nav-label { margin: 12px 10px 8px; color: #8997aa; font-size: 10px; font-weight: 750; letter-spacing: 1.25px; text-transform: uppercase; }
+    .nav-link { display: flex; min-height: 42px; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: #5d6d82; font-size: 13px; font-weight: 600; text-align: left; text-decoration: none; }
+    .nav-link:hover, .nav-link.active { background: var(--pale); color: var(--navy-dark); }
+    .nav-icon { display: grid; width: 18px; height: 18px; flex: 0 0 18px; place-items: center; }
+    .nav-icon svg { display: block; width: 18px; height: 18px; }
+    .sidebar-footer { margin-top: auto; padding: 18px 9px 0; color: #8997aa; font-size: 10px; }
+    main { max-width: 1240px; margin-left: 244px; padding: 35px 48px 48px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 6px; color: var(--navy); font-size: 11px; font-weight: 750; letter-spacing: 1.35px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); letter-spacing: -1.3px; }
+    .date { color: var(--muted); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .card { min-width: 0; padding: 23px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    .card h2 { margin: 0; font-size: 16px; }
+    .card > p { margin: 7px 0 19px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .field { display: grid; gap: 7px; margin-bottom: 14px; }
+    label { color: #46566e; font-size: 11px; font-weight: 650; }
+    input, select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #d5dfeb; border-radius: 8px; outline: 0; background: white; color: var(--ink); font-size: 12px; }
+    input:focus, select:focus { border-color: #5b84b1; box-shadow: 0 0 0 3px #e8f0fa; }
+    .button { display: inline-flex; min-height: 41px; align-items: center; justify-content: center; padding: 0 15px; border: 1px solid #d5dfeb; border-radius: 9px; background: white; color: var(--navy-dark); font-size: 11px; font-weight: 700; }
+    .button-primary { border-color: var(--navy); background: var(--navy); color: white; }
+    .button:disabled { cursor: wait; opacity: .55; }
+    .form-error { min-height: 16px; margin: 2px 0 9px; color: #b7473c; font-size: 11px; }
+    .form-success { min-height: 16px; margin: 2px 0 9px; color: #26734a; font-size: 11px; }
+    .account-list { grid-column: 1 / -1; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 11px 12px; border-bottom: 1px solid var(--line); color: #75849a; font-size: 9px; letter-spacing: .65px; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #edf1f6; color: #46566e; font-size: 11px; }
+    .empty { padding: 24px 12px; color: var(--muted); text-align: center; }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 5; max-width: calc(100vw - 32px); padding: 12px 16px; transform: translateY(16px); border-radius: 10px; background: var(--navy-dark); color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .mobile-nav-toggle { display: none; }
+    @media (max-width: 900px) { .sidebar { width: 210px; } main { margin-left: 210px; padding: 30px 27px 38px; } }
+    @media (max-width: 620px) { .sidebar { position: relative; width: auto; padding: 14px 16px; } .brand { margin-bottom: 12px; } .sidebar-footer { display: none; } .nav-link { gap: 12px; padding: 10px 12px; font-size: 11px; } main { margin: 0; padding: 25px 16px 32px; } .grid { grid-template-columns: 1fr; } .account-list { grid-column: auto; } .topbar { align-items: flex-start; } }
+  </style>
+</head>
+<body>
+  <aside class="sidebar" aria-label="Navigasi administrator">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">RA</div><div><div class="brand-name">Ruang Absen</div><div class="brand-caption">Portal absensi peserta magang</div></div></div>
+    <div class="nav-label">Administrator</div>
+    <a class="nav-link" href="riwayat.html">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5h16M4 10h16M4 14.5h10M4 19h10M18 15v6m-3-3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+      Kelola riwayat absensi
+    </a>
+    <a class="nav-link" href="divisi.html">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Kelola divisi
+    </a>
+    <a class="nav-link active" href="pengelola.html" aria-current="page">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 11a3 3 0 1 0 0-6M17 14a5 5 0 0 1 3.5 4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+      Kelola akun peserta
+    </a>
+    <button class="nav-link" id="signOutButton" type="button">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Keluar
+    </button>
+    <div class="sidebar-footer">Ruang Absen · Magang</div>
+  </aside>
+  <main>
+    <header class="topbar"><div><p class="eyebrow">Panel administrator</p><h1>Kelola akun peserta</h1></div><div class="date" id="headerDate"></div></header>
+    <div class="grid">
+      <section class="card" aria-labelledby="createTitle">
+        <h2 id="createTitle">Buat akun peserta</h2>
+        <p>Buat akun dengan email unik dan berikan kata sandi sementara kepada peserta secara privat.</p>
+        <form id="createUserForm">
+          <div class="field"><label for="nameInput">Nama lengkap</label><input id="nameInput" maxlength="80" required></div>
+          <div class="field"><label for="emailInput">Email login</label><input id="emailInput" type="email" maxlength="254" autocomplete="email" required></div>
+          <div class="field"><label for="identityInput">NIM / NIS (opsional)</label><input id="identityInput" maxlength="40"></div>
+          <div class="field"><label for="schoolInput">Sekolah / kampus (opsional)</label><input id="schoolInput" maxlength="100"></div>
+          <div class="field"><label for="newPasswordInput">Kata sandi sementara (minimal 12 karakter)</label><input id="newPasswordInput" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></div>
+          <div class="form-error" id="createError" role="alert"></div>
+          <button class="button button-primary" id="createButton" type="submit">Buat akun peserta</button>
+        </form>
+      </section>
+      <section class="card" aria-labelledby="resetTitle">
+        <h2 id="resetTitle">Atur ulang kata sandi</h2>
+        <p>Pilih akun peserta yang tidak bisa masuk, lalu buat kata sandi sementara baru minimal 12 karakter.</p>
+        <form id="resetPasswordForm">
+          <div class="field"><label for="participantSelect">Akun peserta</label><select id="participantSelect" required><option value="">Memuat akun...</option></select></div>
+          <div class="field"><label for="resetPasswordInput">Kata sandi baru</label><input id="resetPasswordInput" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></div>
+          <div class="form-error" id="resetError" role="alert"></div>
+          <button class="button button-primary" id="resetButton" type="submit">Atur ulang kata sandi</button>
+        </form>
+      </section>
+      <section class="card account-list" aria-labelledby="accountsTitle">
+        <h2 id="accountsTitle">Daftar akun peserta</h2>
+        <p id="accountCount">Memuat daftar akun...</p>
+        <div class="table-wrap"><table><thead><tr><th>Nama</th><th>Email login</th><th>NIM / NIS</th><th>Instansi</th><th>Status kata sandi</th></tr></thead><tbody id="usersBody"><tr><td class="empty" colspan="5">Memuat akun...</td></tr></tbody></table></div>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="api/page-transition.js"></script>
+  <script src="api/session-timeout.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const API_URL = "api/index.php";
+      const $ = (id) => document.getElementById(id);
+      let csrfToken = "";
+      let users = [];
+      let toastTimeout;
+
+      function showToast(message) {
+        $("toast").textContent = message;
+        $("toast").classList.add("show");
+        window.clearTimeout(toastTimeout);
+        toastTimeout = window.setTimeout(() => $("toast").classList.remove("show"), 3500);
+      }
+
+      async function apiRequest(action, { method = "GET", data = null } = {}) {
+        const headers = { Accept: "application/json" };
+        if (data !== null) headers["Content-Type"] = "application/json";
+        if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+        const response = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, {
+          method, headers, credentials: "same-origin",
+          body: data === null ? undefined : JSON.stringify(data)
+        });
+        let result;
+        try { result = await response.json(); }
+        catch { throw new Error("Respons server tidak valid. Periksa konfigurasi PHP."); }
+        if (result.csrf) {
+          csrfToken = result.csrf;
+          if (action === "session" && result.user && window.RuangAbsenSession) window.RuangAbsenSession.start(csrfToken);
+        }
+        if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+        return result;
+      }
+
+      function renderUsers() {
+        const body = $("usersBody");
+        const select = $("participantSelect");
+        const selected = select.value;
+        body.replaceChildren();
+        select.replaceChildren(new Option("Pilih akun peserta", ""));
+        $("accountCount").textContent = `${users.length} akun peserta`;
+        if (!users.length) {
+          const row = body.insertRow();
+          const cell = row.insertCell();
+          cell.className = "empty";
+          cell.colSpan = 5;
+          cell.textContent = "Belum ada akun peserta.";
+          return;
+        }
+        users.forEach((user) => {
+          const row = body.insertRow();
+          row.insertCell().textContent = user.name;
+          row.insertCell().textContent = user.email;
+          row.insertCell().textContent = user.identity || "—";
+          row.insertCell().textContent = user.school || "—";
+          row.insertCell().textContent = user.hasPassword ? "Kata sandi aktif" : "Belum diaktifkan";
+          select.add(new Option(`${user.name} · ${user.email}`, String(user.id)));
+        });
+        if (users.some((user) => String(user.id) === selected)) select.value = selected;
+      }
+
+      async function loadUsers() {
+        const result = await apiRequest("admin-users");
+        users = result.users;
+        renderUsers();
+      }
+
+      $("createUserForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        $("createError").textContent = "";
+        const button = $("createButton");
+        button.disabled = true;
+        try {
+          const result = await apiRequest("admin-user", {
+            method: "POST",
+            data: {
+              operation: "create",
+              name: $("nameInput").value.trim(),
+              email: $("emailInput").value.trim(),
+              identity: $("identityInput").value.trim(),
+              school: $("schoolInput").value.trim(),
+              password: $("newPasswordInput").value
+            }
+          });
+          users = result.users;
+          renderUsers();
+          $("createUserForm").reset();
+          showToast(result.message);
+        } catch (error) {
+          console.error("Tidak dapat membuat akun peserta.", error);
+          $("createError").textContent = error.message;
+        } finally { button.disabled = false; }
+      });
+
+      $("resetPasswordForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        $("resetError").textContent = "";
+        const button = $("resetButton");
+        button.disabled = true;
+        try {
+          const result = await apiRequest("admin-user", {
+            method: "POST",
+            data: {
+              operation: "reset-password",
+              userId: Number($("participantSelect").value),
+              password: $("resetPasswordInput").value
+            }
+          });
+          users = result.users;
+          renderUsers();
+          $("resetPasswordForm").reset();
+          showToast(result.message);
+        } catch (error) {
+          console.error("Tidak dapat mengatur ulang kata sandi peserta.", error);
+          $("resetError").textContent = error.message;
+        } finally { button.disabled = false; }
+      });
+
+      $("signOutButton").addEventListener("click", async () => {
+        const button = $("signOutButton");
+        button.disabled = true;
+        try {
+          await apiRequest("logout", { method: "POST", data: {} });
+          await window.RuangAbsenTransition.navigate("login.html");
+        } catch (error) {
+          console.error("Tidak dapat keluar dari akun administrator.", error);
+          showToast(`Gagal keluar: ${error.message}`);
+          button.disabled = false;
+        }
+      });
+
+      $("headerDate").textContent = new Intl.DateTimeFormat("id-ID", {
+        timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric"
+      }).format(new Date());
+
+      apiRequest("session").then(async (session) => {
+        if (!session.user) {
+          window.location.replace("login.html?next=pengelola.html");
+          return;
+        }
+        if (session.user.role !== "admin") {
+          window.location.replace("index.html");
+          return;
+        }
+        await loadUsers();
+      }).catch((error) => {
+        console.error("Tidak dapat memuat halaman pengelola.", error);
+        showToast(`Halaman pengelola tidak dapat dimuat: ${error.message}`);
+      });
+    })();
+  </script>
+</body>
+</html>
